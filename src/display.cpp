@@ -11,15 +11,22 @@ DisplayManager display;
 #define OUTER_Y 6
 #define OUTER_W 468
 #define OUTER_H 308
-#define HEADER_Y 8
-#define HEADER_LINE_Y 48
 
-// Four separate display fields. The grid is moved down after removing
-// the instruction text so the lower parts of every field have more room.
+// Compact header: logo at top-left, title beside it.
+#define HEADER_LINE_Y 43
+#define LOGO_PATH "/logo.png"
+#define LOGO_X 16
+#define LOGO_Y 10
+#define LOGO_BOX_W 105
+#define LOGO_BOX_H 25
+#define LOGO_SAMPLE 3
+#define LOGO_SOURCE_MAX 600
+
+// Four separate display fields, moved upward and given the available height.
 #define GRID_X 14
-#define GRID_Y 58
+#define GRID_Y 51
 #define GRID_W 452
-#define GRID_H 236
+#define GRID_H 246
 #define CELL_GAP 8
 #define CELL_W ((GRID_W - CELL_GAP) / 2)
 #define CELL_H ((GRID_H - CELL_GAP) / 2)
@@ -27,12 +34,6 @@ DisplayManager display;
 #define RIGHT_X (GRID_X + CELL_W + CELL_GAP)
 #define TOP_Y GRID_Y
 #define BOTTOM_Y (GRID_Y + CELL_H + CELL_GAP)
-
-#define LOGO_PATH "/logo.png"
-#define LOGO_X 18
-#define LOGO_Y 11
-#define LOGO_MAX_WIDTH 150
-#define LOGO_MAX_HEIGHT 30
 
 namespace
 {
@@ -64,7 +65,7 @@ namespace
         (void)file;
         if (!logoFile)
             return 0;
-        return logoFile.read(buffer, length);
+        return static_cast<int32_t>(logoFile.read(buffer, length));
     }
 
     int32_t logoSeek(PNGFILE *file, int32_t position)
@@ -80,25 +81,46 @@ namespace
         if (!logoTft)
             return 0;
 
-        static uint16_t lineBuffer[160];
-        const int16_t width = min<int16_t>(pDraw->iWidth, LOGO_MAX_WIDTH);
+        // Down-sample the source image so a large PNG cannot overflow the
+        // header and remains compact at the top-left of the display.
+        if ((pDraw->y % LOGO_SAMPLE) != 0)
+            return 1;
+
+        static uint16_t sourceLine[LOGO_SOURCE_MAX];
+        static uint16_t outputLine[LOGO_SOURCE_MAX / LOGO_SAMPLE + 2];
+
+        int16_t sourceWidth = pDraw->iWidth;
+        if (sourceWidth <= 0)
+            return 1;
+        if (sourceWidth > LOGO_SOURCE_MAX)
+            sourceWidth = LOGO_SOURCE_MAX;
 
         logoPng.getLineAsRGB565(
             pDraw,
-            lineBuffer,
+            sourceLine,
             PNG_RGB565_BIG_ENDIAN,
             TFT_BLACK);
 
-        if (pDraw->y < LOGO_MAX_HEIGHT && width > 0)
+        int16_t outputWidth = 0;
+        for (int16_t sx = 0; sx < sourceWidth; sx += LOGO_SAMPLE)
         {
-            logoTft->pushImage(
-                LOGO_X,
-                LOGO_Y + pDraw->y,
-                width,
-                1,
-                lineBuffer);
+            if (outputWidth >= (LOGO_SOURCE_MAX / LOGO_SAMPLE + 2))
+                break;
+            outputLine[outputWidth++] = sourceLine[sx];
         }
 
+        if (outputWidth <= 0)
+            return 1;
+
+        int16_t outputY = LOGO_Y + (pDraw->y / LOGO_SAMPLE);
+        if (outputY >= LOGO_Y + LOGO_BOX_H)
+            return 1;
+
+        int16_t outputX = LOGO_X;
+        if (outputWidth > LOGO_BOX_W)
+            outputWidth = LOGO_BOX_W;
+
+        logoTft->pushImage(outputX, outputY, outputWidth, 1, outputLine);
         return 1;
     }
 }
@@ -182,6 +204,9 @@ void DisplayManager::showErrorScreen(const String &msg)
 
 void DisplayManager::drawLogo()
 {
+    // Always reserve and clear only the small logo area.
+    tft.fillRect(LOGO_X, LOGO_Y, LOGO_BOX_W, LOGO_BOX_H, TFT_BLACK);
+
     if (!LittleFS.exists(LOGO_PATH))
     {
         Serial.println("Logo not found: /logo.png");
@@ -197,13 +222,10 @@ void DisplayManager::drawLogo()
         return;
     }
 
-    // Keep the logo confined to the header. If the source image is wider
-    // than the reserved area, the callback clips it rather than affecting
-    // any of the four live fields below.
-    tft.fillRect(LOGO_X, LOGO_Y, LOGO_MAX_WIDTH, LOGO_MAX_HEIGHT, TFT_BLACK);
     tft.startWrite();
     logoPng.decode(nullptr, 0);
     tft.endWrite();
+
     logoPng.close();
     logoTft = nullptr;
 }
@@ -216,13 +238,14 @@ void DisplayManager::drawLayout()
 
     tft.drawRoundRect(OUTER_X, OUTER_Y, OUTER_W, OUTER_H, 5, TFT_WHITE);
 
+    // Compact top header: logo on the left and title beside it.
+    drawLogo();
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.drawCentreString("PUSH/PULL TESTER", 315, HEADER_Y + 10, 4);
-    drawLogo();
+    tft.drawCentreString("PUSH/PULL TESTER", 305, 24, 3);
     tft.drawFastHLine(OUTER_X + 8, HEADER_LINE_Y, OUTER_W - 16, TFT_DARKGREY);
 
-    // Keep all four fields separate.
+    // Four completely separate fields.
     tft.drawRoundRect(LEFT_X, TOP_Y, CELL_W, CELL_H, 5, TFT_WHITE);
     tft.drawRoundRect(RIGHT_X, TOP_Y, CELL_W, CELL_H, 5, TFT_WHITE);
     tft.drawRoundRect(LEFT_X, BOTTOM_Y, CELL_W, CELL_H, 5, TFT_WHITE);
