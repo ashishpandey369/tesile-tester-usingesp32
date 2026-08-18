@@ -37,6 +37,10 @@ private:
     float currentForce = INITIAL_CURRENT_FORCE;
     long lastRunPosition = 0;
 
+    // Prevents manual movement until the user turns the toggle OFF
+    // after selecting a new mode.
+    bool modeChangeLock = false;
+
     void updateManualControl();
     void startTestMotion();
     void stopTestMotion();
