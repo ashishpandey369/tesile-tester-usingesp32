@@ -1,29 +1,62 @@
 # Changelog
 
-## v2.0.0 — 2026-08-18 14:15 IST
+# GoldTester
+## Precision Gold Chain Tensile Testing Machine
 
-### Major architecture change
+---
 
-- Removed TAL220 / HX711 load-cell functionality from the active machine.
-- Removed force-based calibration and force-based pass/fail logic.
-- Added `TENSILE` and `PUSH` operating modes.
-- Added UP/DOWN manual single-step movement.
-- Added UP/DOWN long-hold continuous movement.
-- Added UP + DOWN long press for mode switching.
-- Converted START/STOP toggle into master automatic-motion control.
-- Toggle OFF immediately stops and disables the motor.
-- Added software Current Force value based on motor steps during automatic operation.
-- Manual positioning does not change Current Force.
-- Next manual button interaction after STOP resets Current Force to `00.000`.
-- Updated display for mode, current software force, motor status and machine status.
-- Removed HX711 dependency from PlatformIO.
-- Updated project overview and README.
+## Version 2.9.8 — READY FOR DEMONSTRATION
 
-### Hardware test target
+### Status
 
-1. Power ON → `READY`, `00.000`.
-2. Use UP/DOWN for manual positioning.
-3. Hold UP + DOWN to change `TENSILE` / `PUSH` mode.
-4. Turn toggle ON → `RUNNING`, automatic motion starts.
-5. Turn toggle OFF → immediate `STOP`.
-6. Press UP or DOWN → Current Force resets to `00.000` and manual positioning resumes.
+- Current machine functions marked ready for demonstration/testing.
+- Four-field boxed display layout is in place.
+- Current Force, Mode, Motor Status, and Machine Status are separated into independent display regions.
+- Motor display status inversion is retained without changing physical motor direction.
+- Manual movement, automatic test movement, mode selection, reset behavior, and master toggle behavior are retained.
+
+### Remaining UI Polish
+
+- Add the final company/project logo.
+- Restore/show the `kg` unit symbol beside the Current Force value.
+
+### Important
+
+This version is the **demonstration-ready baseline**. No functional changes should be made while adding the remaining logo and `kg` display polish unless explicitly approved.
+
+---
+
+## Version 2.9.7
+
+### Display
+
+- Corrected the four live display fields so their labels are not overwritten by value refresh regions.
+- Kept Current Force, Mode, Motor Status, and Machine Status separated.
+- Preserved flicker-free regional updates.
+
+---
+
+## Version 1.0.0 (Original Development)
+
+### Added
+
+- Initial project structure
+- PlatformIO project setup
+- Modular OOP architecture
+- Complete project documentation
+- Hardware architecture
+- Software architecture
+- Wiring guide
+- Force control design
+- Display UI design
+- Calibration documentation
+- Testing procedure
+- Safety system
+- Project roadmap
+- Engineering logbook
+
+---
+
+## Notes
+
+This changelog records significant hardware, software, display, and documentation updates throughout the development of the GoldTester project.
