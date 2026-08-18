@@ -7,6 +7,11 @@ void UIManager::begin()
     pinMode(BUTTON_UP_PIN, INPUT_PULLUP);
     pinMode(BUTTON_DOWN_PIN, INPUT_PULLUP);
     pinMode(START_SWITCH_PIN, INPUT_PULLUP);
+
+    lastUp = digitalRead(BUTTON_UP_PIN);
+    lastDown = digitalRead(BUTTON_DOWN_PIN);
+    lastStart = digitalRead(START_SWITCH_PIN);
+    previousStartState = (lastStart == LOW);
 }
 
 void UIManager::update()
@@ -22,8 +27,6 @@ void UIManager::update()
     downHoldState = (currentDown == LOW);
     startState = (currentStart == LOW);
 
-    // Individual long-hold state remains TRUE for the whole time the
-    // button is held after the long-press threshold.
     if (currentUp == LOW)
     {
         if (lastUp == HIGH)
@@ -48,31 +51,12 @@ void UIManager::update()
         downLongState = false;
     }
 
-    // UP + DOWN held together = one mode-change event.
-    if (currentUp == LOW && currentDown == LOW)
-    {
-        if (lastUp == HIGH || lastDown == HIGH)
-        {
-            modeHoldStart = millis();
-            modeLongConsumed = false;
-        }
+    // A mode change is requested only when the toggle changes from OFF
+    // to ON while either manual button is being held.
+    bool justTurnedOn = startState && !previousStartState;
+    modeChangeState = justTurnedOn && (upHoldState || downHoldState);
 
-        if (!modeLongConsumed &&
-            (millis() - modeHoldStart >= BUTTON_LONG_PRESS_MS))
-        {
-            modeLongState = true;
-            modeLongConsumed = true;
-        }
-        else
-        {
-            modeLongState = false;
-        }
-    }
-    else
-    {
-        modeLongState = false;
-        modeLongConsumed = false;
-    }
+    previousStartState = startState;
 
     lastUp = currentUp;
     lastDown = currentDown;
@@ -92,6 +76,11 @@ bool UIManager::downPressed()
 bool UIManager::startOn() const
 {
     return startState;
+}
+
+bool UIManager::startTurnedOn() const
+{
+    return startState && !previousStartState;
 }
 
 bool UIManager::upHeld() const
@@ -114,7 +103,9 @@ bool UIManager::downLongHeld() const
     return downLongState;
 }
 
-bool UIManager::modeLongPressed()
+bool UIManager::modeChangeRequested()
 {
-    return modeLongState;
+    bool requested = modeChangeState;
+    modeChangeState = false;
+    return requested;
 }
