@@ -26,10 +26,12 @@ void DisplayManager::update()
     if (!layoutDrawn)
         return;
 
-    drawForce();
+    // Draw the other UI first. Current force is deliberately drawn LAST
+    // so nothing else can overwrite its display area.
     drawMode();
     drawMotor();
     drawStatus();
+    drawForce();
 }
 
 void DisplayManager::clear()
@@ -72,10 +74,10 @@ void DisplayManager::showHomeScreen()
     machineStatus = "READY";
 
     drawLayout();
-    drawForce();
     drawMode();
     drawMotor();
     drawStatus();
+    drawForce();
 }
 
 void DisplayManager::showErrorScreen(const String &msg)
@@ -96,7 +98,6 @@ void DisplayManager::drawLayout()
 {
     layoutDrawn = true;
 
-    // Proven working layout from 40cb1fab.
     tft.setTextDatum(TL_DATUM);
     tft.fillScreen(TFT_BLACK);
     tft.drawRect(6, 6, 468, 308, BORDER_COLOR);
@@ -129,12 +130,12 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    // Exact working area/position from 40cb1fab.
-    tft.fillRect(CONTENT_L, 90, 210, 55, TFT_BLACK);
+    // Dedicated force region. Keep the proven position and use a fixed
+    // font size so the value and kg remain visible and predictable.
+    tft.fillRect(CONTENT_L, 90, 220, 55, TFT_BLACK);
+
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
-
-    // 10% smaller than the original size-6 value, with kg attached.
     tft.drawString(String(currentForce, 3) + " kg", CONTENT_L, 96, 5);
 }
 
@@ -160,7 +161,6 @@ void DisplayManager::drawMotor()
 
     tft.fillRect(CONTENT_L, 200, 210, 35, TFT_BLACK);
 
-    // Display-only inversion. Physical motor direction is unchanged.
     String displayMotor = motorStatus;
     uint16_t color = TFT_YELLOW;
 
