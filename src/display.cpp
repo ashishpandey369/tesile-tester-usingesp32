@@ -12,8 +12,9 @@ DisplayManager display;
 #define OUTER_H 308
 #define HEADER_LINE_Y 50
 
+// Move the compact header logo down by about 2 mm on the 480x320 display.
 #define LOGO_X 14
-#define LOGO_Y 6
+#define LOGO_Y 14
 #define LOGO_W 64
 #define LOGO_H 40
 
@@ -28,6 +29,14 @@ DisplayManager display;
 #define RIGHT_X (GRID_X + CELL_W + CELL_GAP)
 #define TOP_Y GRID_Y
 #define BOTTOM_Y (GRID_Y + CELL_H + CELL_GAP)
+
+// Startup logo is enlarged directly from the same inspected bitmap.
+#define STARTUP_SCALE 4
+#define STARTUP_LOGO_W (LOGO_W * STARTUP_SCALE)
+#define STARTUP_LOGO_H (LOGO_H * STARTUP_SCALE)
+#define STARTUP_LOGO_X ((SCREEN_W - STARTUP_LOGO_W) / 2)
+#define STARTUP_LOGO_Y 42
+#define STARTUP_BITMAP_BYTES ((STARTUP_LOGO_W * STARTUP_LOGO_H) / 8)
 
 // Inspected source logo: 398x260 RGBA Tanishq mark.
 // Converted to a compact 64x40 1-bit white-on-black bitmap so it is
@@ -54,6 +63,33 @@ static const uint8_t tanishqLogo[LOGO_W * LOGO_H / 8] PROGMEM = {
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x70, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30,
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x01, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30,
 };
+
+static uint8_t startupLogo[STARTUP_BITMAP_BYTES];
+
+static void buildStartupLogo()
+{
+    memset(startupLogo, 0, sizeof(startupLogo));
+
+    for (int sy = 0; sy < LOGO_H; ++sy)
+    {
+        for (int sx = 0; sx < LOGO_W; ++sx)
+        {
+            const uint8_t src = pgm_read_byte(&tanishqLogo[(sy * LOGO_W + sx) >> 3]);
+            const bool set = (src & (0x80 >> (sx & 7))) != 0;
+            if (!set) continue;
+
+            for (int dy = 0; dy < STARTUP_SCALE; ++dy)
+            {
+                for (int dx = 0; dx < STARTUP_SCALE; ++dx)
+                {
+                    const int x = sx * STARTUP_SCALE + dx;
+                    const int y = sy * STARTUP_SCALE + dy;
+                    startupLogo[(y * STARTUP_LOGO_W + x) >> 3] |= (0x80 >> (x & 7));
+                }
+            }
+        }
+    }
+}
 
 void DisplayManager::begin()
 {
@@ -83,13 +119,18 @@ void DisplayManager::clear()
 void DisplayManager::showBootScreen()
 {
     clear();
+    buildStartupLogo();
+
+    // Full-screen startup branding: same logo, enlarged and centered.
     tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.drawCentreString("PUSH/PULL TESTER", 240, 88, 4);
+    tft.drawBitmap(STARTUP_LOGO_X, STARTUP_LOGO_Y, startupLogo,
+                   STARTUP_LOGO_W, STARTUP_LOGO_H, TFT_WHITE, TFT_BLACK);
+
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawCentreString("ESP32 TEST SYSTEM", 240, 132, 2);
-    tft.drawCentreString("Initializing...", 240, 178, 2);
-    delay(BOOT_SCREEN_TIME);
+    tft.drawCentreString("Initializing...", 240, 238, 4);
+
+    // Keep the complete branding screen visible for 3 seconds.
+    delay(3000);
     showHomeScreen();
 }
 
