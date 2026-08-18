@@ -9,6 +9,7 @@ void MachineController::begin()
     mode = MachineMode::TENSILE;
     state = MachineState::READY;
     modeChangeLock = false;
+    resetPending = false;
     manualContinuousActive = false;
 
     display.setCurrentForce(currentForce);
@@ -19,7 +20,6 @@ void MachineController::begin()
 
 void MachineController::update()
 {
-    // Toggle OFF is the master stop. It always wins over movement.
     if (!ui.startOn())
     {
         if (state == MachineState::RUNNING)
@@ -28,23 +28,22 @@ void MachineController::update()
         if (modeChangeLock)
         {
             modeChangeLock = false;
-            resetCurrentForce();
-            state = MachineState::READY;
-        }
-        else
-        {
-            updateManualControl();
+            resetPending = true;
+            manualContinuousActive = false;
+            motor.stop();
+            state = MachineState::STOP;
         }
 
+        updateManualControl();
         refreshDisplay();
         return;
     }
 
-    // A single button press followed by toggle ON selects the mode.
-    // UP selects TENSILE/PULL, DOWN selects PUSH.
+    // Toggle ON + button selects the mode. It does not start motion.
     if (ui.modeChangeRequested())
     {
         motor.stop();
+        manualContinuousActive = false;
 
         if (ui.requestedModeDirection() < 0)
             mode = MachineMode::TENSILE;
@@ -52,13 +51,13 @@ void MachineController::update()
             mode = MachineMode::PUSH;
 
         modeChangeLock = true;
+        resetPending = false;
         state = MachineState::STOP;
         refreshDisplay();
         return;
     }
 
-    // Keep the motor stopped until the user turns the switch OFF after
-    // selecting a mode.
+    // Stay stopped until the user turns the toggle OFF.
     if (modeChangeLock)
     {
         motor.stop();
@@ -67,7 +66,7 @@ void MachineController::update()
         return;
     }
 
-    // Toggle ON: automatic test motion takes over according to the mode.
+    // Toggle ON starts the selected test mode.
     if (state != MachineState::RUNNING)
         startTestMotion();
 
@@ -77,34 +76,41 @@ void MachineController::update()
 
 void MachineController::updateManualControl()
 {
-    if (ui.upPressed() || ui.downPressed() || ui.upLongHeld() || ui.downLongHeld())
-    {
-        if (state == MachineState::STOP)
-            resetCurrentForce();
+    // Each one-shot event must be read exactly once.
+    bool upPressed = ui.upPressed();
+    bool downPressed = ui.downPressed();
 
+    // After mode selection and switch OFF, the next button press resets
+    // the virtual force to 00.000 and also performs its normal manual step.
+    if (resetPending && (upPressed || downPressed))
+    {
+        resetCurrentForce();
+        resetPending = false;
         state = MachineState::READY;
     }
 
-    // A completed fixed-step move is handled by motor.update() and is not
-    // cancelled when the button is released.
-    if (ui.upPressed())
+    // Immediate 150-step manual movement.
+    if (upPressed)
     {
         manualContinuousActive = false;
         motor.manualStep(+1);
+        state = MachineState::READY;
         return;
     }
 
-    if (ui.downPressed())
+    if (downPressed)
     {
         manualContinuousActive = false;
         motor.manualStep(-1);
+        state = MachineState::READY;
         return;
     }
 
-    // Hold for 1 second, then continuous movement until release.
+    // Hold for 1 second, then smooth continuous movement until release.
     if (ui.upLongHeld())
     {
         manualContinuousActive = true;
+        state = MachineState::READY;
         motor.manualHold(+1);
         return;
     }
@@ -112,6 +118,7 @@ void MachineController::updateManualControl()
     if (ui.downLongHeld())
     {
         manualContinuousActive = true;
+        state = MachineState::READY;
         motor.manualHold(-1);
         return;
     }
@@ -129,7 +136,6 @@ void MachineController::startTestMotion()
     // PUSH         = clockwise    (+1)
     int direction = (mode == MachineMode::TENSILE) ? -1 : +1;
 
-    // Use the same smooth constant-speed path as manual hold.
     motor.runContinuous(direction, MANUAL_HOLD_SPEED);
     lastRunPosition = motor.getCurrentPosition();
     state = MachineState::RUNNING;
@@ -180,6 +186,11 @@ void MachineController::refreshDisplay()
     {
         display.setMachineStatus("TURN OFF");
         display.setMotorStatus("STOP");
+    }
+    else if (resetPending)
+    {
+        display.setMachineStatus("STOP");
+        display.setMotorStatus("PRESS BUTTON");
     }
     else if (state == MachineState::RUNNING)
     {
