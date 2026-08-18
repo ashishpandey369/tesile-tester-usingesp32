@@ -51,10 +51,43 @@ void UIManager::update()
         downLongState = false;
     }
 
-    // A mode change is requested only when the toggle changes from OFF
-    // to ON while either manual button is being held.
-    bool justTurnedOn = startState && !previousStartState;
-    modeChangeState = justTurnedOn && (upHoldState || downHoldState);
+    // Mode selection: press one button, then the opposite button quickly.
+    if (upState && !downState)
+    {
+        if (sequenceWaiting && !firstSequenceWasUp &&
+            (millis() - firstSequenceTime <= MODE_CHANGE_WINDOW_MS))
+        {
+            modeChangeState = true;
+            sequenceWaiting = false;
+        }
+        else
+        {
+            sequenceWaiting = true;
+            firstSequenceWasUp = true;
+            firstSequenceTime = millis();
+        }
+    }
+    else if (downState && !upState)
+    {
+        if (sequenceWaiting && firstSequenceWasUp &&
+            (millis() - firstSequenceTime <= MODE_CHANGE_WINDOW_MS))
+        {
+            modeChangeState = true;
+            sequenceWaiting = false;
+        }
+        else
+        {
+            sequenceWaiting = true;
+            firstSequenceWasUp = false;
+            firstSequenceTime = millis();
+        }
+    }
+
+    if (sequenceWaiting &&
+        (millis() - firstSequenceTime > MODE_CHANGE_WINDOW_MS))
+    {
+        sequenceWaiting = false;
+    }
 
     previousStartState = startState;
 
