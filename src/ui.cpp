@@ -22,50 +22,33 @@ void UIManager::update()
     downHoldState = (currentDown == LOW);
     startState = (currentStart == LOW);
 
-    upLongState = false;
-    downLongState = false;
-
+    // Individual long-hold state remains TRUE for the whole time the
+    // button is held after the long-press threshold.
     if (currentUp == LOW)
     {
         if (lastUp == HIGH)
-        {
             upHoldStart = millis();
-            upLongConsumed = false;
-        }
 
-        if (!upLongConsumed &&
-            (millis() - upHoldStart >= BUTTON_LONG_PRESS_MS))
-        {
-            upLongState = true;
-            upLongConsumed = true;
-        }
+        upLongState = (millis() - upHoldStart >= BUTTON_LONG_PRESS_MS);
     }
     else
     {
-        upLongConsumed = false;
+        upLongState = false;
     }
 
     if (currentDown == LOW)
     {
         if (lastDown == HIGH)
-        {
             downHoldStart = millis();
-            downLongConsumed = false;
-        }
 
-        if (!downLongConsumed &&
-            (millis() - downHoldStart >= BUTTON_LONG_PRESS_MS))
-        {
-            downLongState = true;
-            downLongConsumed = true;
-        }
+        downLongState = (millis() - downHoldStart >= BUTTON_LONG_PRESS_MS);
     }
     else
     {
-        downLongConsumed = false;
+        downLongState = false;
     }
 
-    // UP + DOWN held together = mode change.
+    // UP + DOWN held together = one mode-change event.
     if (currentUp == LOW && currentDown == LOW)
     {
         if (lastUp == HIGH || lastDown == HIGH)
