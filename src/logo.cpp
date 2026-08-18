@@ -15,8 +15,8 @@ int16_t targetX = 0;
 int16_t targetY = 0;
 int16_t targetW = 0;
 int16_t targetH = 0;
-int16_t lastTargetRow = -1;
-uint16_t lineBuffer[240];
+uint16_t sourceLine[400];
+uint16_t scaledLine[240];
 
 void *pngOpen(const char *filename, int32_t *size)
 {
@@ -28,6 +28,7 @@ void *pngOpen(const char *filename, int32_t *size)
     }
 
     *size = static_cast<int32_t>(file->size());
+    Serial.printf("Logo PNG opened: %ld bytes\n", static_cast<long>(*size));
     return file;
 }
 
@@ -64,47 +65,59 @@ int pngDraw(PNGDRAW *draw)
     if (logoTft == nullptr || draw == nullptr)
         return 0;
 
+    const int16_t sourceWidth = static_cast<int16_t>(draw->iWidth);
+    if (sourceWidth <= 0 || sourceWidth > 400)
+        return 0;
+
+    // Decode the complete source row first. The old implementation only
+    // allocated 240 pixels even though the source image is 398 pixels wide,
+    // which corrupted memory and caused PNG decoding to fail.
+    png.getLineAsRGB565(draw, sourceLine, PNG_RGB565_BIG_ENDIAN, 0x0000);
+
     const int16_t outY = static_cast<int16_t>(
         (static_cast<int32_t>(draw->y) * targetH) / png.getHeight());
 
-    if (outY == lastTargetRow)
+    // Several source rows can map to one destination row when downscaling.
+    // Only draw the destination row once.
+    static int16_t lastOutY = -1;
+    if (outY == lastOutY)
         return 1;
-
-    lastTargetRow = outY;
-
-    uint16_t sourceWidth = static_cast<uint16_t>(draw->iWidth);
-    if (sourceWidth > 240)
-        sourceWidth = 240;
-
-    uint16_t decodedLine[240];
-    png.getLineAsRGB565(draw, decodedLine, PNG_RGB565_BIG_ENDIAN, 0x0000);
+    lastOutY = outY;
 
     for (int16_t x = 0; x < targetW; ++x)
     {
         const int16_t sourceX = static_cast<int16_t>(
-            (static_cast<int32_t>(x) * png.getWidth()) / targetW);
-
-        lineBuffer[x] =
-            (sourceX >= 0 && sourceX < sourceWidth)
-                ? decodedLine[sourceX]
-                : TFT_BLACK;
+            (static_cast<int32_t>(x) * sourceWidth) / targetW);
+        scaledLine[x] = sourceLine[sourceX];
     }
 
-    logoTft->pushImage(targetX, targetY + outY, targetW, 1, lineBuffer);
+    logoTft->pushImage(targetX, targetY + outY, targetW, 1, scaledLine);
     return 1;
 }
 
 bool drawLogoFile(TFT_eSPI &tft, int16_t x, int16_t y, int16_t w, int16_t h)
 {
     if (!LittleFS.exists("/logo.png"))
+    {
+        Serial.println("Logo file missing: /logo.png");
         return false;
+    }
+
+    File checkFile = LittleFS.open("/logo.png", "r");
+    const size_t fileSize = checkFile ? checkFile.size() : 0;
+    checkFile.close();
+
+    if (fileSize < 32)
+    {
+        Serial.printf("Logo file invalid: %u bytes\n", static_cast<unsigned>(fileSize));
+        return false;
+    }
 
     logoTft = &tft;
     targetX = x;
     targetY = y;
     targetW = min<int16_t>(w, 240);
     targetH = h;
-    lastTargetRow = -1;
 
     tft.startWrite();
 
@@ -120,16 +133,16 @@ bool drawLogoFile(TFT_eSPI &tft, int16_t x, int16_t y, int16_t w, int16_t h)
 
     if (rc == PNG_SUCCESS)
     {
-        if (png.getWidth() <= 0 || png.getHeight() <= 0)
-        {
-            png.close();
-        }
-        else
-        {
-            const int decodeRc = png.decode(nullptr, 0);
-            success = (decodeRc == PNG_SUCCESS);
-            png.close();
-        }
+        Serial.printf("Logo PNG decoded header: %dx%d\n", png.getWidth(), png.getHeight());
+        const int decodeRc = png.decode(nullptr, 0);
+        success = (decodeRc == PNG_SUCCESS);
+        Serial.printf("Logo PNG decode rc=%d\n", decodeRc);
+        png.close();
+    }
+    else
+    {
+        Serial.printf("Logo PNG open failed: rc=%d, file=%u bytes\n",
+                      rc, static_cast<unsigned>(fileSize));
     }
 
     tft.endWrite();
@@ -147,8 +160,16 @@ void logoBegin()
         return;
     }
 
-    if (!LittleFS.exists("/logo.png"))
+    File file = LittleFS.open("/logo.png", "r");
+    if (!file)
+    {
         Serial.println("Logo file missing: /logo.png");
+        return;
+    }
+
+    Serial.printf("Logo filesystem ready, logo.png=%u bytes\n",
+                  static_cast<unsigned>(file.size()));
+    file.close();
 }
 
 void drawLogoScaled(TFT_eSPI &tft, int16_t x, int16_t y,
