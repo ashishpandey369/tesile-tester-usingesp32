@@ -115,7 +115,6 @@ void DisplayManager::drawLayout()
     tft.drawRoundRect(LEFT_X, BOTTOM_Y, CELL_W, CELL_H, 5, TFT_WHITE);
     tft.drawRoundRect(RIGHT_X, BOTTOM_Y, CELL_W, CELL_H, 5, TFT_WHITE);
 
-    // Keep labels safely above their live-value refresh regions.
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     tft.drawCentreString("CURRENT FORCE", LEFT_X + CELL_W / 2, TOP_Y + 14, 2);
     tft.drawCentreString("MODE", RIGHT_X + CELL_W / 2, TOP_Y + 14, 2);
@@ -133,8 +132,6 @@ void DisplayManager::drawForce()
         return;
     lastForce = currentForce;
 
-    // Start below the label. The previous refresh rectangle was covering
-    // the lower half of CURRENT FORCE and the other labels.
     const int16_t x = LEFT_X + 4;
     const int16_t y = TOP_Y + 29;
     const int16_t w = CELL_W - 8;
@@ -145,8 +142,8 @@ void DisplayManager::drawForce()
     String value = String(currentForce, 3);
     String unit = "kg";
     const uint8_t valueFont = 6;
-    const uint8_t unitFont = 3;
-    const int16_t gap = 6;
+    const uint8_t unitFont = 4;
+    const int16_t gap = 5;
 
     int16_t valueW = tft.textWidth(value, valueFont);
     int16_t unitW = tft.textWidth(unit, unitFont);
@@ -158,8 +155,9 @@ void DisplayManager::drawForce()
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
     tft.drawString(value, startX, centerY, valueFont);
 
+    // Unit directly beside the force value.
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString(unit, startX + valueW + gap, centerY + 4, unitFont);
+    tft.drawString(unit, startX + valueW + gap, centerY, unitFont);
 }
 
 void DisplayManager::drawMode()
