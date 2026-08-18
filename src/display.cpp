@@ -164,7 +164,6 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    // Clear the complete value area first.
     tft.fillRect(CONTENT_L, 88, 230, 54, TFT_BLACK);
 
     // Large numeric value.
@@ -175,7 +174,7 @@ void DisplayManager::drawForce()
     // Smaller unit.
     tft.setTextDatum(BL_DATUM);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString("kg", 198, 136, 2);
+    tft.drawString("kg", 205, 136, 2);
 }
 
 //====================================================
@@ -207,7 +206,8 @@ void DisplayManager::drawMode()
 
 void DisplayManager::drawMotor()
 {
-    if (motorStatus == lastMotor)
+    // Motor direction can change when MODE changes even if motorStatus stays STOP.
+    if (motorStatus == lastMotor && mode == lastMode)
         return;
 
     lastMotor = motorStatus;
@@ -217,7 +217,6 @@ void DisplayManager::drawMotor()
     String displayMotor = motorStatus;
     uint16_t color = TFT_YELLOW;
 
-    // Manual direction names.
     if (motorStatus == "UP" || motorStatus == "FORWARD")
     {
         displayMotor = "UP";
@@ -228,18 +227,20 @@ void DisplayManager::drawMotor()
         displayMotor = "DOWN";
         color = TFT_RED;
     }
-    // During an automatic test, the selected mode determines the direction.
-    else if (mode == "TENSILE" && motorStatus != "STOP")
+    else if (motorStatus == "RUNNING")
     {
-        displayMotor = "UP";
-        color = TFT_GREEN;
+        if (mode == "TENSILE")
+        {
+            displayMotor = "UP";
+            color = TFT_GREEN;
+        }
+        else
+        {
+            displayMotor = "DOWN";
+            color = TFT_RED;
+        }
     }
-    else if (mode == "PUSH" && motorStatus != "STOP")
-    {
-        displayMotor = "DOWN";
-        color = TFT_RED;
-    }
-    else if (motorStatus == "STOP")
+    else
     {
         displayMotor = "STOP";
         color = TFT_YELLOW;
@@ -295,6 +296,7 @@ void DisplayManager::setCurrentForce(float value)
 void DisplayManager::setMode(const String &newMode)
 {
     mode = newMode;
+    lastMotor = "";
 }
 
 void DisplayManager::setMotorStatus(const String &status)
