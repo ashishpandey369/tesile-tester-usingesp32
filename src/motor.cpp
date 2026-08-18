@@ -53,12 +53,13 @@ void MotorController::runContinuous(int requestedDirection, float speed)
     speedMode = true;
     running = true;
 
-    // Machine direction convention:
-    // TENSILE uses requestedDirection -1 and is displayed as UP.
-    // PUSH uses requestedDirection +1 and is displayed as DOWN.
+    // Inverted physical motor direction:
+    // requested -1 (TENSILE) now drives the opposite physical direction.
+    // requested +1 (PUSH) now drives the opposite physical direction.
+    // The reported direction remains tied to the actual commanded movement.
     direction = requestedDirection < 0 ? +1 : -1;
 
-    float signedSpeed = fabsf(speed) * (requestedDirection > 0 ? 1.0f : -1.0f);
+    float signedSpeed = fabsf(speed) * (requestedDirection > 0 ? -1.0f : 1.0f);
     stepper.setSpeed(signedSpeed);
 }
 
@@ -71,13 +72,14 @@ void MotorController::manualStep(int requestedDirection)
     speedMode = false;
     running = true;
 
-    // Manual UI convention:
-    // +1 = UP, -1 = DOWN.
-    direction = requestedDirection > 0 ? +1 : -1;
+    // Inverted physical motor direction:
+    // UP button (+1) drives the motor in the negative step direction.
+    // DOWN button (-1) drives the motor in the positive step direction.
+    direction = requestedDirection > 0 ? -1 : +1;
 
     stepper.setMaxSpeed(MOTOR_NORMAL_SPEED);
     stepper.setAcceleration(MOTOR_ACCELERATION);
-    stepper.move(requestedDirection > 0 ? MANUAL_STEP_STEPS : -MANUAL_STEP_STEPS);
+    stepper.move(requestedDirection > 0 ? -MANUAL_STEP_STEPS : MANUAL_STEP_STEPS);
 }
 
 void MotorController::manualHold(int requestedDirection)
@@ -89,10 +91,10 @@ void MotorController::manualHold(int requestedDirection)
     speedMode = true;
     running = true;
 
-    // Manual UI convention: +1 = UP, -1 = DOWN.
-    direction = requestedDirection > 0 ? +1 : -1;
+    // Inverted physical motor direction for continuous manual movement.
+    direction = requestedDirection > 0 ? -1 : +1;
 
-    float signedSpeed = MANUAL_HOLD_SPEED * (requestedDirection > 0 ? 1.0f : -1.0f);
+    float signedSpeed = MANUAL_HOLD_SPEED * (requestedDirection > 0 ? -1.0f : 1.0f);
     stepper.setSpeed(signedSpeed);
 }
 
