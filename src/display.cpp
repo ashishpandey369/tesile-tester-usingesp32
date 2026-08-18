@@ -26,12 +26,11 @@ void DisplayManager::update()
     if (!layoutDrawn)
         return;
 
-    // Draw the other UI first. Current force is deliberately drawn LAST
-    // so nothing else can overwrite its display area.
+    // Keep each UI region independent. Do not render one region over another.
+    drawForce();
     drawMode();
     drawMotor();
     drawStatus();
-    drawForce();
 }
 
 void DisplayManager::clear()
@@ -60,7 +59,6 @@ void DisplayManager::showBootScreen()
     tft.drawCentreString("Initializing...", 240, 180, 2);
 
     delay(BOOT_SCREEN_TIME);
-
     showHomeScreen();
 }
 
@@ -74,10 +72,10 @@ void DisplayManager::showHomeScreen()
     machineStatus = "READY";
 
     drawLayout();
+    drawForce();
     drawMode();
     drawMotor();
     drawStatus();
-    drawForce();
 }
 
 void DisplayManager::showErrorScreen(const String &msg)
@@ -130,12 +128,13 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    // Dedicated force region. Keep the proven position and use a fixed
-    // font size so the value and kg remain visible and predictable.
+    // Force has its own isolated rectangle. Nothing else is drawn here.
     tft.fillRect(CONTENT_L, 90, 220, 55, TFT_BLACK);
 
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
+
+    // Proven working position and size, with kg attached.
     tft.drawString(String(currentForce, 3) + " kg", CONTENT_L, 96, 5);
 }
 
@@ -164,6 +163,7 @@ void DisplayManager::drawMotor()
     String displayMotor = motorStatus;
     uint16_t color = TFT_YELLOW;
 
+    // Display-only inversion. Physical motor direction is unchanged.
     if (motorStatus == "UP")
     {
         displayMotor = "DOWN";
@@ -207,12 +207,6 @@ void DisplayManager::drawStatus()
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(color, TFT_BLACK);
     tft.drawString(machineStatus, 250, 205, 3);
-
-    if (machineStatus == "TURN OFF")
-    {
-        tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-        tft.drawCentreString("TURN SWITCH OFF", 240, 230, 2);
-    }
 }
 
 void DisplayManager::setCurrentForce(float value)
