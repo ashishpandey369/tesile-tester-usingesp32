@@ -1,5 +1,5 @@
-#ifndef LOGO_H
-#define LOGO_H
+#ifndef TESILE_TESTER_LOGO_H
+#define TESILE_TESTER_LOGO_H
 
 #include <Arduino.h>
 #include <TFT_eSPI.h>
