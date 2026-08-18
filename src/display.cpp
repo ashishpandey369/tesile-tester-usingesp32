@@ -48,7 +48,6 @@ void DisplayManager::showBootScreen()
     clear();
 
     tft.setTextDatum(MC_DATUM);
-
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
     tft.drawCentreString("GOLD TESTER", 240, 88, 4);
 
@@ -59,7 +58,6 @@ void DisplayManager::showBootScreen()
     tft.drawCentreString("Initializing...", 240, 176, 2);
 
     delay(BOOT_SCREEN_TIME);
-
     showHomeScreen();
 }
 
@@ -84,7 +82,6 @@ void DisplayManager::showErrorScreen(const String &msg)
     clear();
 
     tft.setTextDatum(MC_DATUM);
-
     tft.setTextColor(TFT_RED, TFT_BLACK);
     tft.drawCentreString("SYSTEM STOP", 240, 72, 4);
 
@@ -138,20 +135,36 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    // Force area is wide enough for the complete value and unit.
-    tft.fillRect(20, 86, 240, 58, TFT_BLACK);
+    // Dedicated force panel: 20..260. The complete value is measured
+    // before drawing so neither leading zeroes nor kg can be clipped.
+    const int16_t panelX = 20;
+    const int16_t panelY = 86;
+    const int16_t panelW = 240;
+    const int16_t panelH = 58;
+
+    tft.fillRect(panelX, panelY, panelW, panelH, TFT_BLACK);
 
     String value = String(currentForce, 3);
+    const int numberSize = 5;
+    const int unitSize = 3;
+    const int16_t gap = 7;
 
-    // Draw the complete value as one string so the leading zeroes and kg
-    // can never be separated or pushed outside the drawing area.
-    String forceText = value + " kg";
+    int16_t numberWidth = tft.textWidth(value, numberSize);
+    int16_t unitWidth = tft.textWidth("kg", unitSize);
+    int16_t totalWidth = numberWidth + gap + unitWidth;
+
+    // Center the complete "00.000 kg" inside the dedicated force panel.
+    int16_t startX = panelX + (panelW - totalWidth) / 2;
+
+    if (startX < panelX + 2)
+        startX = panelX + 2;
 
     tft.setTextDatum(ML_DATUM);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    tft.drawString(value, startX, 115, numberSize);
 
-    // Keep the complete string inside the left content area.
-    tft.drawString(forceText, 20, 115, 5);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.drawString("kg", startX + numberWidth + gap, 115, unitSize);
 }
 
 void DisplayManager::drawMode()
@@ -197,16 +210,8 @@ void DisplayManager::drawMotor()
     }
     else if (motorStatus == "RUNNING")
     {
-        if (mode == "TENSILE")
-        {
-            displayMotor = "UP";
-            color = TFT_GREEN;
-        }
-        else
-        {
-            displayMotor = "DOWN";
-            color = TFT_RED;
-        }
+        displayMotor = (mode == "TENSILE") ? "UP" : "DOWN";
+        color = (mode == "TENSILE") ? TFT_GREEN : TFT_RED;
     }
     else
     {
