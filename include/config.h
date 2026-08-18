@@ -8,7 +8,7 @@
 //====================================================
 
 #define PROJECT_NAME "GoldTester"
-#define PROJECT_VERSION "2.2.0"
+#define PROJECT_VERSION "2.3.0"
 
 //====================================================
 // Display Configuration
@@ -35,22 +35,23 @@ constexpr float MAX_VIRTUAL_FORCE_KG = 99.999f;
 //====================================================
 
 constexpr float MOTOR_MAX_SPEED = 2000.0f;
-constexpr float MOTOR_NORMAL_SPEED = 900.0f;
-constexpr float MOTOR_RETURN_SPEED = 800.0f;
-constexpr float MOTOR_ACCELERATION = 1000.0f;
+constexpr float MOTOR_NORMAL_SPEED = 700.0f;
+constexpr float MOTOR_RETURN_SPEED = 700.0f;
+constexpr float MOTOR_ACCELERATION = 800.0f;
 
 // Manual movement
-constexpr long MANUAL_STEP_STEPS = 100;
-constexpr float MANUAL_HOLD_SPEED = 900.0f;
+constexpr long MANUAL_STEP_STEPS = 200;
+constexpr float MANUAL_HOLD_SPEED = 700.0f;
 
 //====================================================
 // Mode / Button Configuration
 //====================================================
 
-constexpr uint16_t BUTTON_LONG_PRESS_MS = 2000;
+constexpr uint16_t BUTTON_LONG_PRESS_MS = 1000;
 constexpr uint16_t BUTTON_DEBOUNCE_MS = 30;
+constexpr uint16_t MODE_CHANGE_WINDOW_MS = 600;
 
-// Hold either UP or DOWN while turning the toggle ON to change mode.
+// Press one button, then the opposite button within the window to change mode.
 
 //====================================================
 // Machine Timing
