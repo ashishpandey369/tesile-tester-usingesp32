@@ -2,55 +2,40 @@
 #define UI_H
 
 #include <Arduino.h>
-
 #include "pins.h"
+#include "config.h"
 
 class UIManager
 {
 public:
-    //------------------------------------------------
-    // Initialization
-    //------------------------------------------------
-
     void begin();
-
-    //------------------------------------------------
-    // Update
-    //------------------------------------------------
-
     void update();
 
-    //------------------------------------------------
-    // Inputs
-    //------------------------------------------------
-
     bool upPressed();
-
     bool downPressed();
+    bool startOn() const;
 
-    bool startPressed();
+    bool upHeld() const;
+    bool downHeld() const;
 
-    // True exactly once, when DOWN has been held continuously for
-    // BUTTON_LONG_PRESS_MS. Independent of downPressed() (which still
-    // fires on the initial press edge).
-    bool downLongPressed();
+    // Long press of UP + DOWN together changes operating mode.
+    bool modeLongPressed();
 
 private:
     bool upState = false;
     bool downState = false;
     bool startState = false;
 
+    bool upHoldState = false;
+    bool downHoldState = false;
+
     bool lastUp = HIGH;
     bool lastDown = HIGH;
     bool lastStart = HIGH;
 
-    //------------------------------------------------
-    // Long press tracking (DOWN button)
-    //------------------------------------------------
-
-    unsigned long downHoldStart = 0;
-    bool downLongConsumed = false;
-    bool downLongState = false;
+    unsigned long modeHoldStart = 0;
+    bool modeLongConsumed = false;
+    bool modeLongState = false;
 };
 
 extern UIManager ui;
