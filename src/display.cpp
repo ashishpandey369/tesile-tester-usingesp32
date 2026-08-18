@@ -7,23 +7,14 @@ DisplayManager display;
 #define CONTENT_R 460
 #define CONTENT_W (CONTENT_R - CONTENT_L)
 
-//====================================================
-// Initialization
-//====================================================
-
 void DisplayManager::begin()
 {
     tft.init();
     tft.setRotation(DISPLAY_ROTATION);
     tft.fillScreen(TFT_BLACK);
     tft.setTextWrap(false);
-
     showBootScreen();
 }
-
-//====================================================
-// Display Update
-//====================================================
 
 void DisplayManager::update()
 {
@@ -40,10 +31,6 @@ void DisplayManager::update()
     drawMotor();
     drawStatus();
 }
-
-//====================================================
-// Clear Screen
-//====================================================
 
 void DisplayManager::clear()
 {
@@ -158,7 +145,7 @@ void DisplayManager::drawLayout()
 
     tft.drawFastHLine(CONTENT_L, 229, CONTENT_W, TFT_DARKGREY);
 
-    // Footer instructions - intentionally kept short and clear.
+    // Footer instructions
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     tft.drawCentreString("UP / DOWN  =  MANUAL MOVEMENT", 240, 244, 1);
@@ -177,12 +164,18 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    // Dedicated value area.
-    tft.fillRect(CONTENT_L, 88, 230, 52, TFT_BLACK);
+    // Clear the complete value area first.
+    tft.fillRect(CONTENT_L, 88, 230, 54, TFT_BLACK);
 
+    // Large numeric value.
     tft.setTextDatum(ML_DATUM);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    tft.drawString(String(currentForce, 3) + " kg", CONTENT_L, 114, 4);
+    tft.drawString(String(currentForce, 3), CONTENT_L, 114, 6);
+
+    // Smaller unit.
+    tft.setTextDatum(BL_DATUM);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.drawString("kg", 198, 136, 2);
 }
 
 //====================================================
@@ -196,7 +189,7 @@ void DisplayManager::drawMode()
 
     lastMode = mode;
 
-    tft.fillRect(270, 88, 185, 52, TFT_BLACK);
+    tft.fillRect(270, 88, 185, 54, TFT_BLACK);
 
     tft.setTextDatum(ML_DATUM);
 
@@ -209,7 +202,7 @@ void DisplayManager::drawMode()
 }
 
 //====================================================
-// Motor Status
+// Motor Status / Direction
 //====================================================
 
 void DisplayManager::drawMotor()
@@ -221,9 +214,40 @@ void DisplayManager::drawMotor()
 
     tft.fillRect(CONTENT_L, 181, 230, 38, TFT_BLACK);
 
+    String displayMotor = motorStatus;
+    uint16_t color = TFT_YELLOW;
+
+    // Manual direction names.
+    if (motorStatus == "UP" || motorStatus == "FORWARD")
+    {
+        displayMotor = "UP";
+        color = TFT_GREEN;
+    }
+    else if (motorStatus == "DOWN" || motorStatus == "BACKWARD" || motorStatus == "REVERSE")
+    {
+        displayMotor = "DOWN";
+        color = TFT_RED;
+    }
+    // During an automatic test, the selected mode determines the direction.
+    else if (mode == "TENSILE" && motorStatus != "STOP")
+    {
+        displayMotor = "UP";
+        color = TFT_GREEN;
+    }
+    else if (mode == "PUSH" && motorStatus != "STOP")
+    {
+        displayMotor = "DOWN";
+        color = TFT_RED;
+    }
+    else if (motorStatus == "STOP")
+    {
+        displayMotor = "STOP";
+        color = TFT_YELLOW;
+    }
+
     tft.setTextDatum(ML_DATUM);
-    tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.drawString(motorStatus, CONTENT_L, 200, 3);
+    tft.setTextColor(color, TFT_BLACK);
+    tft.drawString(displayMotor, CONTENT_L, 200, 4);
 }
 
 //====================================================
@@ -247,14 +271,10 @@ void DisplayManager::drawStatus()
         color = TFT_CYAN;
     else if (machineStatus == "STOP")
         color = TFT_RED;
-    else if (machineStatus == "TURN OFF")
-        color = TFT_ORANGE;
-    else if (machineStatus == "PRESS BUTTON")
-        color = TFT_ORANGE;
 
     tft.setTextDatum(ML_DATUM);
     tft.setTextColor(color, TFT_BLACK);
-    tft.drawString(machineStatus, 270, 200, 3);
+    tft.drawString(machineStatus, 270, 200, 4);
 }
 
 //====================================================
