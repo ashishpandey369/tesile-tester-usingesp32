@@ -138,22 +138,20 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    // Clear only the force value area. No full-screen redraw = flicker free.
-    tft.fillRect(CONTENT_L, 88, 235, 54, TFT_BLACK);
+    // Force area is wide enough for the complete value and unit.
+    tft.fillRect(20, 86, 240, 58, TFT_BLACK);
 
     String value = String(currentForce, 3);
 
-    // Large number.
+    // Draw the complete value as one string so the leading zeroes and kg
+    // can never be separated or pushed outside the drawing area.
+    String forceText = value + " kg";
+
     tft.setTextDatum(ML_DATUM);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    tft.drawString(value, CONTENT_L, 114, 6);
 
-    // Unit is slightly larger than before and kept immediately beside the value.
-    int16_t numberWidth = tft.textWidth(value, 6);
-    int16_t kgX = CONTENT_L + numberWidth + 8;
-
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString("kg", kgX, 116, 3);
+    // Keep the complete string inside the left content area.
+    tft.drawString(forceText, 20, 115, 5);
 }
 
 void DisplayManager::drawMode()
@@ -177,7 +175,6 @@ void DisplayManager::drawMode()
 
 void DisplayManager::drawMotor()
 {
-    // This function is refreshed whenever the actual motor-status string changes.
     if (motorStatus == lastMotor)
         return;
 
