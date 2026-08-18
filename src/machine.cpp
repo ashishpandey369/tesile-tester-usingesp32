@@ -40,8 +40,8 @@ void MachineController::update()
         return;
     }
 
-    // Hold either button while turning the toggle ON to change mode.
-    // The motor remains stopped until the switch is turned OFF again.
+    // A quick opposite-button sequence changes the operating mode.
+    // The motor remains stopped until the toggle is turned OFF again.
     if (ui.modeChangeRequested())
     {
         motor.stop();
@@ -72,15 +72,14 @@ void MachineController::updateManualControl()
 {
     if (ui.upPressed() || ui.downPressed() || ui.upLongHeld() || ui.downLongHeld())
     {
-        // A button interaction after STOP starts a fresh test cycle.
         if (state == MachineState::STOP)
             resetCurrentForce();
 
         state = MachineState::READY;
     }
 
-    // Short press = one complete fixed step.
-    // The move is allowed to finish by motor.update() even after release.
+    // A completed 200-step move is handled by motor.update() and is not
+    // cancelled when the button is released.
     if (ui.upPressed())
     {
         manualContinuousActive = false;
@@ -95,7 +94,7 @@ void MachineController::updateManualControl()
         return;
     }
 
-    // Long hold = continuous movement until release.
+    // Hold for 1 second, then continuous movement until release.
     if (ui.upLongHeld())
     {
         manualContinuousActive = true;
@@ -110,8 +109,6 @@ void MachineController::updateManualControl()
         return;
     }
 
-    // Only stop here when a continuous manual movement was active.
-    // A short step must not be cancelled by the next loop iteration.
     if (manualContinuousActive && !ui.upHeld() && !ui.downHeld())
     {
         manualContinuousActive = false;
@@ -123,7 +120,8 @@ void MachineController::startTestMotion()
 {
     int direction = (mode == MachineMode::TENSILE) ? +1 : -1;
 
-    motor.runContinuous(direction, MOTOR_NORMAL_SPEED);
+    // Use the same smooth constant-speed path as manual hold.
+    motor.runContinuous(direction, MANUAL_HOLD_SPEED);
     lastRunPosition = motor.getCurrentPosition();
     state = MachineState::RUNNING;
 }
