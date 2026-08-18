@@ -43,10 +43,6 @@ void DisplayManager::clear()
     lastStatus = "";
 }
 
-//====================================================
-// Boot Screen
-//====================================================
-
 void DisplayManager::showBootScreen()
 {
     clear();
@@ -67,10 +63,6 @@ void DisplayManager::showBootScreen()
     showHomeScreen();
 }
 
-//====================================================
-// Home Screen
-//====================================================
-
 void DisplayManager::showHomeScreen()
 {
     clear();
@@ -86,10 +78,6 @@ void DisplayManager::showHomeScreen()
     drawMotor();
     drawStatus();
 }
-
-//====================================================
-// Error Screen
-//====================================================
 
 void DisplayManager::showErrorScreen(const String &msg)
 {
@@ -108,20 +96,13 @@ void DisplayManager::showErrorScreen(const String &msg)
     tft.drawCentreString("THEN RESTART", 240, 222, 2);
 }
 
-//====================================================
-// Main Layout
-//====================================================
-
 void DisplayManager::drawLayout()
 {
     layoutDrawn = true;
 
     tft.fillScreen(TFT_BLACK);
-
-    // Outer frame
     tft.drawRect(6, 6, 468, 308, BORDER_COLOR);
 
-    // Header
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
     tft.drawCentreString("GOLD TESTER", 240, 22, 4);
@@ -131,7 +112,6 @@ void DisplayManager::drawLayout()
 
     tft.drawFastHLine(CONTENT_L, 57, CONTENT_W, TFT_DARKGREY);
 
-    // Force / Mode labels
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.drawString("CURRENT FORCE", CONTENT_L, 68, 2);
@@ -139,23 +119,17 @@ void DisplayManager::drawLayout()
 
     tft.drawFastHLine(CONTENT_L, 150, CONTENT_W, TFT_DARKGREY);
 
-    // Motor / Machine labels
     tft.drawString("MOTOR", CONTENT_L, 162, 2);
     tft.drawString("MACHINE STATUS", 270, 162, 2);
 
     tft.drawFastHLine(CONTENT_L, 229, CONTENT_W, TFT_DARKGREY);
 
-    // Footer instructions
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     tft.drawCentreString("UP / DOWN  =  MANUAL MOVEMENT", 240, 244, 1);
     tft.drawCentreString("SWITCH ON  =  START TEST", 240, 262, 1);
     tft.drawCentreString("RESET / MODE  =  RESET / SELECT MODE", 240, 280, 1);
 }
-
-//====================================================
-// Current Force
-//====================================================
 
 void DisplayManager::drawForce()
 {
@@ -164,22 +138,23 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    tft.fillRect(CONTENT_L, 88, 230, 54, TFT_BLACK);
+    // Clear only the force value area. No full-screen redraw = flicker free.
+    tft.fillRect(CONTENT_L, 88, 235, 54, TFT_BLACK);
 
-    // Large numeric value.
+    String value = String(currentForce, 3);
+
+    // Large number.
     tft.setTextDatum(ML_DATUM);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    tft.drawString(String(currentForce, 3), CONTENT_L, 114, 6);
+    tft.drawString(value, CONTENT_L, 114, 6);
 
-    // Smaller unit.
-    tft.setTextDatum(BL_DATUM);
+    // Unit is slightly larger than before and kept immediately beside the value.
+    int16_t numberWidth = tft.textWidth(value, 6);
+    int16_t kgX = CONTENT_L + numberWidth + 8;
+
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString("kg", 205, 136, 2);
+    tft.drawString("kg", kgX, 116, 3);
 }
-
-//====================================================
-// Mode
-//====================================================
 
 void DisplayManager::drawMode()
 {
@@ -200,14 +175,10 @@ void DisplayManager::drawMode()
     tft.drawString(mode, 270, 114, 4);
 }
 
-//====================================================
-// Motor Status / Direction
-//====================================================
-
 void DisplayManager::drawMotor()
 {
-    // Motor direction can change when MODE changes even if motorStatus stays STOP.
-    if (motorStatus == lastMotor && mode == lastMode)
+    // This function is refreshed whenever the actual motor-status string changes.
+    if (motorStatus == lastMotor)
         return;
 
     lastMotor = motorStatus;
@@ -217,12 +188,12 @@ void DisplayManager::drawMotor()
     String displayMotor = motorStatus;
     uint16_t color = TFT_YELLOW;
 
-    if (motorStatus == "UP" || motorStatus == "FORWARD")
+    if (motorStatus == "UP" || motorStatus == "FORWARD" || motorStatus == "ANTICLOCKWISE")
     {
         displayMotor = "UP";
         color = TFT_GREEN;
     }
-    else if (motorStatus == "DOWN" || motorStatus == "BACKWARD" || motorStatus == "REVERSE")
+    else if (motorStatus == "DOWN" || motorStatus == "BACKWARD" || motorStatus == "REVERSE" || motorStatus == "CLOCKWISE")
     {
         displayMotor = "DOWN";
         color = TFT_RED;
@@ -251,10 +222,6 @@ void DisplayManager::drawMotor()
     tft.drawString(displayMotor, CONTENT_L, 200, 4);
 }
 
-//====================================================
-// Machine Status
-//====================================================
-
 void DisplayManager::drawStatus()
 {
     if (machineStatus == lastStatus)
@@ -278,10 +245,6 @@ void DisplayManager::drawStatus()
     tft.drawString(machineStatus, 270, 200, 4);
 }
 
-//====================================================
-// Setters
-//====================================================
-
 void DisplayManager::setCurrentForce(float value)
 {
     if (value < 0.0f)
@@ -296,7 +259,6 @@ void DisplayManager::setCurrentForce(float value)
 void DisplayManager::setMode(const String &newMode)
 {
     mode = newMode;
-    lastMotor = "";
 }
 
 void DisplayManager::setMotorStatus(const String &status)
