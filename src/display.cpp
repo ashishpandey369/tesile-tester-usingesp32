@@ -1,5 +1,7 @@
 #include "display.h"
 #include "config.h"
+#include <LittleFS.h>
+#include <PNGdec.h>
 
 DisplayManager display;
 
@@ -24,12 +26,131 @@ DisplayManager display;
 #define TOP_Y GRID_Y
 #define BOTTOM_Y (GRID_Y + CELL_H + CELL_GAP)
 
+#define LOGO_PATH "/logo.png"
+#define LOGO_X 18
+#define LOGO_Y 9
+#define LOGO_SAMPLE 7
+#define LOGO_MAX_WIDTH 400
+
+namespace
+{
+    PNG logoPng;
+    File logoFile;
+
+    void *logoOpen(const char *filename, int32_t *size)
+    {
+        logoFile = LittleFS.open(filename, "r");
+        if (!logoFile)
+        {
+            *size = 0;
+            return nullptr;
+        }
+        *size = static_cast<int32_t>(logoFile.size());
+        return &logoFile;
+    }
+
+    void logoClose(void *handle)
+    {
+        (void)handle;
+        if (logoFile)
+            logoFile.close();
+    }
+
+    int32_t logoRead(PNGFILE *page, uint8_t *buffer, int32_t length)
+    {
+        (void)page;
+        if (!logoFile)
+            return 0;
+        return static_cast<int32_t>(logoFile.read(buffer, length));
+    }
+
+    int32_t logoSeek(PNGFILE *page, int32_t position)
+    {
+        (void)page;
+        if (!logoFile)
+            return 0;
+        return logoFile.seek(position) ? 1 : 0;
+    }
+
+    int logoDraw(PNGDRAW *pDraw)
+    {
+        if ((pDraw->y % LOGO_SAMPLE) != 0)
+            return 1;
+
+        static uint16_t lineBuffer[LOGO_MAX_WIDTH];
+        static uint16_t scaledLine[LOGO_MAX_WIDTH / LOGO_SAMPLE + 2];
+
+        logoPng.getLineAsRGB565(
+            pDraw,
+            lineBuffer,
+            PNG_RGB565_BIG_ENDIAN,
+            TFT_BLACK);
+
+        const int16_t scaledWidth =
+            (pDraw->iWidth + LOGO_SAMPLE - 1) / LOGO_SAMPLE;
+
+        for (int16_t x = 0; x < scaledWidth; ++x)
+        {
+            const int16_t sourceX = x * LOGO_SAMPLE;
+            scaledLine[x] = lineBuffer[sourceX < pDraw->iWidth ? sourceX : pDraw->iWidth - 1];
+        }
+
+        display.tft.pushImage(
+            LOGO_X,
+            LOGO_Y + (pDraw->y / LOGO_SAMPLE),
+            scaledWidth,
+            1,
+            scaledLine);
+
+        return 1;
+    }
+
+    void drawLogo()
+    {
+        if (!LittleFS.exists(LOGO_PATH))
+        {
+            Serial.println("Logo not found: /logo.png");
+            return;
+        }
+
+        int16_t rc = logoPng.open(
+            LOGO_PATH,
+            logoOpen,
+            logoClose,
+            logoRead,
+            logoSeek,
+            logoDraw);
+
+        if (rc != PNG_SUCCESS)
+        {
+            Serial.printf("Logo PNG open failed: %d\n", rc);
+            return;
+        }
+
+        if (logoPng.getWidth() > LOGO_MAX_WIDTH)
+        {
+            Serial.printf("Logo too wide: %d px\n", logoPng.getWidth());
+            logoPng.close();
+            return;
+        }
+
+        display.tft.startWrite();
+        logoPng.decode(nullptr, 0);
+        display.tft.endWrite();
+        logoPng.close();
+    }
+}
+
 void DisplayManager::begin()
 {
     tft.init();
     tft.setRotation(DISPLAY_ROTATION);
     tft.fillScreen(TFT_BLACK);
     tft.setTextWrap(false);
+
+    if (!LittleFS.begin(true))
+        Serial.println("LittleFS initialization failed; logo disabled");
+
     showBootScreen();
 }
 
@@ -63,7 +184,7 @@ void DisplayManager::showBootScreen()
     clear();
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.drawCentreString("GOLD TESTER", 240, 88, 4);
+    tft.drawCentreString("PUSH/PULL TESTER", 240, 88, 4);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.drawCentreString("ESP32 TENSILE TESTER", 240, 132, 2);
     tft.drawCentreString("Initializing...", 240, 178, 2);
@@ -107,7 +228,8 @@ void DisplayManager::drawLayout()
 
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.drawCentreString("GOLD TESTER", 240, HEADER_Y + 10, 4);
+    tft.drawCentreString("PUSH/PULL TESTER", 300, HEADER_Y + 10, 4);
+    drawLogo();
     tft.drawFastHLine(OUTER_X + 8, HEADER_LINE_Y, OUTER_W - 16, TFT_DARKGREY);
 
     tft.drawRoundRect(LEFT_X, TOP_Y, CELL_W, CELL_H, 5, TFT_WHITE);
@@ -155,7 +277,6 @@ void DisplayManager::drawForce()
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
     tft.drawString(value, startX, centerY, valueFont);
 
-    // Unit directly beside the force value.
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.drawString(unit, startX + valueW + gap, centerY, unitFont);
 }
