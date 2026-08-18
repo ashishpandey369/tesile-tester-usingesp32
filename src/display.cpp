@@ -40,16 +40,21 @@ namespace
     File logoFile;
     TFT_eSPI *logoTft = nullptr;
 
-    int32_t logoOpen(PNGFILE *file, const char *filename)
+    void *logoOpen(const char *filename, int32_t *size)
     {
-        (void)file;
         logoFile = LittleFS.open(filename, "r");
-        return logoFile ? 1 : 0;
+        if (!logoFile)
+        {
+            *size = 0;
+            return nullptr;
+        }
+        *size = static_cast<int32_t>(logoFile.size());
+        return &logoFile;
     }
 
-    void logoClose(PNGFILE *file)
+    void logoClose(void *handle)
     {
-        (void)file;
+        (void)handle;
         if (logoFile)
             logoFile.close();
     }
@@ -84,8 +89,6 @@ namespace
             PNG_RGB565_BIG_ENDIAN,
             TFT_BLACK);
 
-        // The PNG is drawn at its native width when it fits the reserved
-        // header area. The logo itself is kept completely inside the header.
         if (pDraw->y < LOGO_MAX_HEIGHT && width > 0)
         {
             logoTft->pushImage(
@@ -187,7 +190,7 @@ void DisplayManager::drawLogo()
 
     logoTft = &tft;
 
-    if (!logoPng.open(LOGO_PATH, logoOpen, logoClose, logoRead, logoSeek, logoDraw))
+    if (logoPng.open(LOGO_PATH, logoOpen, logoClose, logoRead, logoSeek, logoDraw) != PNG_SUCCESS)
     {
         Serial.println("Logo PNG open failed");
         logoTft = nullptr;
