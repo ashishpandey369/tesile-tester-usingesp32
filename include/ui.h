@@ -11,8 +11,6 @@ public:
     void begin();
     void update();
 
-    // Manual movement events. A short press is released to the machine
-    // only after the mode-selection window expires without a toggle ON.
     bool upPressed();
     bool downPressed();
 
@@ -24,7 +22,7 @@ public:
     bool upLongHeld() const;
     bool downLongHeld() const;
 
-    // Mode selection: press UP or DOWN, then turn the toggle ON.
+    // While toggle is ON, a button press selects the operating mode.
     bool modeChangeRequested();
     int requestedModeDirection() const;
 
@@ -46,15 +44,11 @@ private:
     unsigned long upHoldStart = 0;
     unsigned long downHoldStart = 0;
 
-    // A button press becomes a mode-selection candidate. If the toggle
-    // is not turned ON during the window, it becomes a normal manual step.
-    bool selectionPending = false;
-    bool selectionWasUp = false;
-    unsigned long selectionTime = 0;
-
+    // A short press is always an immediate manual movement event.
     bool manualUpEvent = false;
     bool manualDownEvent = false;
 
+    // Button press while toggle is ON selects the mode.
     bool modeChangeState = false;
     int modeDirection = 0;
 };
