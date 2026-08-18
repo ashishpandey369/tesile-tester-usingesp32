@@ -14,7 +14,7 @@ DisplayManager display;
 
 #define LOGO_X 16
 #define LOGO_Y 2
-#define LOGO_W 62
+#define LOGO_W 64
 #define LOGO_H 40
 
 #define GRID_X 14
@@ -30,7 +30,7 @@ DisplayManager display;
 #define BOTTOM_Y (GRID_Y + CELL_H + CELL_GAP)
 
 // Inspected source logo: 398x260 RGBA Tanishq mark.
-// Converted to a compact 62x40 1-bit white-on-black bitmap so it is
+// Converted to a compact 64x40 1-bit white-on-black bitmap so it is
 // deterministic on the ESP32 TFT and does not depend on PNGdec/LittleFS.
 static const uint8_t tanishqLogo[LOGO_W * LOGO_H / 8] PROGMEM = {
     0x00, 0x00, 0x03, 0xFF, 0xFC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0xFF, 0xFE, 0x00, 0x00, 0x00,
