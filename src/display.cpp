@@ -1,6 +1,6 @@
 #include "display.h"
 #include "config.h"
-#include <LittleFS.h>
+#include "logo.h"
 
 DisplayManager display;
 
@@ -12,9 +12,9 @@ DisplayManager display;
 #define OUTER_H 308
 #define HEADER_LINE_Y 50
 #define LOGO_X 14
-#define LOGO_Y 14
+#define LOGO_Y 20
 #define LOGO_W 64
-#define LOGO_H 40
+#define LOGO_H 42
 #define GRID_X 14
 #define GRID_Y 57
 #define GRID_W 452
@@ -26,106 +26,13 @@ DisplayManager display;
 #define RIGHT_X (GRID_X + CELL_W + CELL_GAP)
 #define TOP_Y GRID_Y
 #define BOTTOM_Y (GRID_Y + CELL_H + CELL_GAP)
-#define LOGO_BMP_PATH "/logo.bmp"
-
-namespace {
-File logoFile;
-uint32_t bmpPixelOffset = 0;
-int32_t bmpWidth = 0;
-int32_t bmpHeight = 0;
-uint32_t bmpRowBytes = 0;
-bool bmpReady = false;
-
-static uint32_t le32(const uint8_t *p) {
-    return uint32_t(p[0]) | (uint32_t(p[1]) << 8) | (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24);
-}
-
-static uint16_t alphaTo565(uint8_t alpha) {
-    const uint16_t r = (uint16_t(alpha) * 31 + 127) / 255;
-    const uint16_t g = (uint16_t(alpha) * 63 + 127) / 255;
-    const uint16_t b = (uint16_t(alpha) * 31 + 127) / 255;
-    return (r << 11) | (g << 5) | b;
-}
-
-static bool openLogoBmp() {
-    bmpReady = false;
-    if (!LittleFS.exists(LOGO_BMP_PATH)) {
-        Serial.println("Logo BMP not found: /logo.bmp");
-        return false;
-    }
-    logoFile = LittleFS.open(LOGO_BMP_PATH, "r");
-    if (!logoFile || logoFile.size() < 138) {
-        Serial.println("Logo BMP open failed");
-        return false;
-    }
-
-    uint8_t header[138];
-    if (logoFile.read(header, sizeof(header)) != sizeof(header) || header[0] != 'B' || header[1] != 'M') {
-        Serial.println("Logo BMP header invalid");
-        logoFile.close();
-        return false;
-    }
-
-    bmpPixelOffset = le32(header + 10);
-    bmpWidth = (int32_t)le32(header + 18);
-    bmpHeight = (int32_t)le32(header + 22);
-    const uint16_t bpp = uint16_t(header[28]) | (uint16_t(header[29]) << 8);
-    const uint32_t compression = le32(header + 30);
-
-    if (bmpWidth <= 0 || bmpHeight == 0 || bpp != 32 || compression != 3) {
-        Serial.printf("Unsupported logo BMP: %ldx%ld %u-bit comp=%lu\n", (long)bmpWidth, (long)bmpHeight, bpp, (unsigned long)compression);
-        logoFile.close();
-        return false;
-    }
-
-    if (bmpHeight < 0) bmpHeight = -bmpHeight;
-    bmpRowBytes = uint32_t(bmpWidth) * 4U;
-    bmpReady = true;
-    Serial.printf("Logo BMP ready: %ldx%ld, 32-bit BGRA\n", (long)bmpWidth, (long)bmpHeight);
-    return true;
-}
-
-static bool readBmpRow(int32_t sourceY, uint8_t *row) {
-    if (!bmpReady || sourceY < 0 || sourceY >= bmpHeight) return false;
-    const uint32_t fileY = uint32_t(bmpHeight - 1 - sourceY);
-    if (!logoFile.seek(bmpPixelOffset + fileY * bmpRowBytes)) return false;
-    return logoFile.read(row, bmpRowBytes) == bmpRowBytes;
-}
-
-static void drawStartupLogo(TFT_eSPI &tft) {
-    static uint8_t row[1600];
-    static uint16_t pixels[400];
-    const int16_t x0 = (SCREEN_W - bmpWidth) / 2;
-    const int16_t y0 = (SCREEN_H - bmpHeight) / 2;
-    for (int32_t y = 0; y < bmpHeight; ++y) {
-        if (!readBmpRow(y, row)) return;
-        for (int32_t x = 0; x < bmpWidth; ++x) pixels[x] = alphaTo565(row[x * 4 + 3]);
-        tft.pushImage(x0, y0 + y, bmpWidth, 1, pixels);
-    }
-}
-
-static void drawHeaderLogo(TFT_eSPI &tft) {
-    static uint8_t row[1600];
-    static uint16_t pixels[LOGO_W];
-    for (int16_t oy = 0; oy < LOGO_H; ++oy) {
-        const int32_t sourceY = (int32_t(oy) * bmpHeight) / LOGO_H;
-        if (!readBmpRow(sourceY, row)) return;
-        for (int16_t ox = 0; ox < LOGO_W; ++ox) {
-            const int32_t sourceX = (int32_t(ox) * bmpWidth) / LOGO_W;
-            pixels[ox] = alphaTo565(row[sourceX * 4 + 3]);
-        }
-        tft.pushImage(LOGO_X, LOGO_Y + oy, LOGO_W, 1, pixels);
-    }
-}
-}
 
 void DisplayManager::begin() {
     tft.init();
     tft.setRotation(DISPLAY_ROTATION);
     tft.fillScreen(TFT_BLACK);
     tft.setTextWrap(false);
-    if (!LittleFS.begin(true)) Serial.println("LittleFS initialization failed");
-    openLogoBmp();
+    logoBegin();
     showBootScreen();
 }
 
@@ -146,12 +53,7 @@ void DisplayManager::clear() {
 void DisplayManager::showBootScreen() {
     clear();
     tft.fillScreen(TFT_BLACK);
-    if (bmpReady) drawStartupLogo(tft);
-    else {
-        tft.setTextDatum(MC_DATUM);
-        tft.setTextColor(TFT_RED, TFT_BLACK);
-        tft.drawCentreString("LOGO ERROR", 240, 130, 4);
-    }
+    drawLogoScaled(tft, 120, 28, 240, 157);
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.drawCentreString("Initializing...", 240, 286, 4);
@@ -176,7 +78,7 @@ void DisplayManager::showErrorScreen(const String &msg) {
 
 void DisplayManager::drawLogo() {
     tft.fillRect(LOGO_X, LOGO_Y, LOGO_W, LOGO_H, TFT_BLACK);
-    if (bmpReady) drawHeaderLogo(tft);
+    drawLogoScaled(tft, LOGO_X, LOGO_Y, LOGO_W, LOGO_H);
 }
 
 void DisplayManager::drawLayout() {
