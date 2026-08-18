@@ -6,10 +6,12 @@ void UIManager::begin()
 {
     pinMode(BUTTON_UP_PIN, INPUT_PULLUP);
     pinMode(BUTTON_DOWN_PIN, INPUT_PULLUP);
+    pinMode(RESET_MODE_BUTTON_PIN, INPUT_PULLUP);
     pinMode(START_SWITCH_PIN, INPUT_PULLUP);
 
     lastUp = digitalRead(BUTTON_UP_PIN);
     lastDown = digitalRead(BUTTON_DOWN_PIN);
+    lastResetMode = digitalRead(RESET_MODE_BUTTON_PIN);
     lastStart = digitalRead(START_SWITCH_PIN);
     previousStartState = (lastStart == LOW);
 }
@@ -18,16 +20,19 @@ void UIManager::update()
 {
     bool currentUp = digitalRead(BUTTON_UP_PIN);
     bool currentDown = digitalRead(BUTTON_DOWN_PIN);
+    bool currentResetMode = digitalRead(RESET_MODE_BUTTON_PIN);
     bool currentStart = digitalRead(START_SWITCH_PIN);
 
     upState = false;
     downState = false;
+    resetModeState = false;
     manualUpEvent = false;
     manualDownEvent = false;
     modeChangeState = false;
 
     bool newUpPress = (lastUp == HIGH && currentUp == LOW);
     bool newDownPress = (lastDown == HIGH && currentDown == LOW);
+    bool newResetModePress = (lastResetMode == HIGH && currentResetMode == LOW);
 
     upHoldState = (currentUp == LOW);
     downHoldState = (currentDown == LOW);
@@ -85,9 +90,13 @@ void UIManager::update()
         }
     }
 
+    if (newResetModePress)
+        resetModeState = true;
+
     previousStartState = startState;
     lastUp = currentUp;
     lastDown = currentDown;
+    lastResetMode = currentResetMode;
     lastStart = currentStart;
 }
 
@@ -102,6 +111,13 @@ bool UIManager::downPressed()
 {
     bool event = manualDownEvent;
     manualDownEvent = false;
+    return event;
+}
+
+bool UIManager::resetModePressed()
+{
+    bool event = resetModeState;
+    resetModeState = false;
     return event;
 }
 
