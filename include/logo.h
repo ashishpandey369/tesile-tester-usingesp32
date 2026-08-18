@@ -2,11 +2,12 @@
 #define LOGO_H
 
 #include <Arduino.h>
+#include <TFT_eSPI.h>
 
-// Source logo converted to RGB565 by the user's online converter.
-// The pixel payload is kept isolated from display.cpp.
-extern const uint16_t logoPixels[] PROGMEM;
 extern const int16_t LOGO_SOURCE_W;
 extern const int16_t LOGO_SOURCE_H;
+
+void logoBegin();
+void drawLogoScaled(TFT_eSPI &tft, int16_t x, int16_t y, int16_t w, int16_t h);
 
 #endif
