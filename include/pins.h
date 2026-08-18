@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 //====================================================
-// HX711 Load Cell
+// HX711 Load Cell (legacy / unused in v2.x)
 //====================================================
 
 constexpr uint8_t HX711_DT_PIN = 4;
@@ -20,13 +20,9 @@ constexpr uint8_t BUZZER_PIN = 14;
 // User Inputs
 //====================================================
 
-// Push Button (+100g)
-constexpr uint8_t BUTTON_UP_PIN = 22; // 34;
-
-// Push Button (-100g)
-constexpr uint8_t BUTTON_DOWN_PIN = 21; // 35;
-
-// Start / Stop Toggle Switch
+constexpr uint8_t BUTTON_UP_PIN = 22;
+constexpr uint8_t BUTTON_DOWN_PIN = 21;
+constexpr uint8_t RESET_MODE_BUTTON_PIN = 26;
 constexpr uint8_t START_SWITCH_PIN = 13;
 
 //====================================================
