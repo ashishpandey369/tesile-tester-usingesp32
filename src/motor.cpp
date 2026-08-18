@@ -87,5 +87,6 @@ bool MotorController::isRunning() const
 
 long MotorController::getCurrentPosition() const
 {
-    return stepper.currentPosition();
+    // AccelStepper::currentPosition() is not const-qualified.
+    return const_cast<AccelStepper &>(stepper).currentPosition();
 }
