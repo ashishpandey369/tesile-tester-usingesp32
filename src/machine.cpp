@@ -20,6 +20,46 @@ void MachineController::begin()
 
 void MachineController::update()
 {
+    // RESET/MODE button:
+    // - force != 0 -> reset the virtual force and stop the machine
+    // - force == 0 -> toggle TENSILE/PUSH while the master switch is OFF
+    if (ui.resetModePressed())
+    {
+        if (currentForce > INITIAL_CURRENT_FORCE)
+        {
+            motor.stop();
+            manualContinuousActive = false;
+            resetCurrentForce();
+
+            if (ui.startOn())
+            {
+                // Prevent the test from restarting until the master switch
+                // is turned OFF after a reset during an active test.
+                modeChangeLock = true;
+                state = MachineState::STOP;
+            }
+            else
+            {
+                resetPending = false;
+                state = MachineState::READY;
+            }
+
+            refreshDisplay();
+            return;
+        }
+
+        if (!ui.startOn())
+        {
+            motor.stop();
+            manualContinuousActive = false;
+            toggleMode();
+            state = MachineState::READY;
+            refreshDisplay();
+            return;
+        }
+    }
+
+    // Toggle OFF is the master stop. It always wins over movement.
     if (!ui.startOn())
     {
         if (state == MachineState::RUNNING)
@@ -39,7 +79,7 @@ void MachineController::update()
         return;
     }
 
-    // Toggle ON + button selects the mode. It does not start motion.
+    // Toggle ON + UP/DOWN selects the mode. It does not start motion.
     if (ui.modeChangeRequested())
     {
         motor.stop();
@@ -76,12 +116,11 @@ void MachineController::update()
 
 void MachineController::updateManualControl()
 {
-    // Each one-shot event must be read exactly once.
     bool upPressed = ui.upPressed();
     bool downPressed = ui.downPressed();
 
-    // After mode selection and switch OFF, the next button press resets
-    // the virtual force to 00.000 and also performs its normal manual step.
+    // After a reset/required switch-off, the next UP/DOWN press clears the
+    // reset-pending state and also performs its normal 150-step movement.
     if (resetPending && (upPressed || downPressed))
     {
         resetCurrentForce();
