@@ -79,8 +79,6 @@ static inline uint16_t logoGray565(uint8_t gray)
 
 static void drawSmoothStartupLogo(TFT_eSPI &tft)
 {
-    // The source bitmap is unchanged. Bilinear filtering only removes the
-    // large square pixels created when the same 64x40 logo is enlarged 4x.
     static uint16_t line[STARTUP_LOGO_W];
 
     tft.startWrite();
@@ -143,10 +141,16 @@ void DisplayManager::clear()
 void DisplayManager::showBootScreen()
 {
     clear();
-    drawSmoothStartupLogo(tft);
     tft.setTextDatum(MC_DATUM);
+
+    // Startup screen: no logo. Use the product name prominently and keep
+    // the initialization message directly underneath it.
+    tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+    tft.drawCentreString("PUSH/PULL TESTER", SCREEN_W / 2, 125, 6);
+
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawCentreString("Initializing...", 240, 238, 4);
+    tft.drawCentreString("Initializing...", SCREEN_W / 2, 175, 4);
+
     delay(3000);
     showHomeScreen();
 }
