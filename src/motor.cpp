@@ -52,9 +52,13 @@ void MotorController::runContinuous(int requestedDirection, float speed)
     enable();
     speedMode = true;
     running = true;
-    direction = requestedDirection > 0 ? +1 : -1;
 
-    float signedSpeed = fabsf(speed) * (direction > 0 ? 1.0f : -1.0f);
+    // Machine direction convention:
+    // TENSILE uses requestedDirection -1 and is displayed as UP.
+    // PUSH uses requestedDirection +1 and is displayed as DOWN.
+    direction = requestedDirection < 0 ? +1 : -1;
+
+    float signedSpeed = fabsf(speed) * (requestedDirection > 0 ? 1.0f : -1.0f);
     stepper.setSpeed(signedSpeed);
 }
 
@@ -66,11 +70,14 @@ void MotorController::manualStep(int requestedDirection)
     enable();
     speedMode = false;
     running = true;
+
+    // Manual UI convention:
+    // +1 = UP, -1 = DOWN.
     direction = requestedDirection > 0 ? +1 : -1;
 
     stepper.setMaxSpeed(MOTOR_NORMAL_SPEED);
     stepper.setAcceleration(MOTOR_ACCELERATION);
-    stepper.move(direction > 0 ? MANUAL_STEP_STEPS : -MANUAL_STEP_STEPS);
+    stepper.move(requestedDirection > 0 ? MANUAL_STEP_STEPS : -MANUAL_STEP_STEPS);
 }
 
 void MotorController::manualHold(int requestedDirection)
@@ -81,9 +88,11 @@ void MotorController::manualHold(int requestedDirection)
     enable();
     speedMode = true;
     running = true;
+
+    // Manual UI convention: +1 = UP, -1 = DOWN.
     direction = requestedDirection > 0 ? +1 : -1;
 
-    float signedSpeed = MANUAL_HOLD_SPEED * (direction > 0 ? 1.0f : -1.0f);
+    float signedSpeed = MANUAL_HOLD_SPEED * (requestedDirection > 0 ? 1.0f : -1.0f);
     stepper.setSpeed(signedSpeed);
 }
 
