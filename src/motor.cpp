@@ -1,3 +1,4 @@
+#include <math.h>
 #include "motor.h"
 
 MotorController motor;
@@ -38,7 +39,6 @@ void MotorController::runContinuous(int direction, float speed)
         return;
 
     enable();
-
     speedMode = true;
     running = true;
 
@@ -52,7 +52,6 @@ void MotorController::manualStep(int direction)
         return;
 
     enable();
-
     speedMode = false;
     running = true;
 
@@ -67,7 +66,6 @@ void MotorController::manualHold(int direction)
         return;
 
     enable();
-
     speedMode = true;
     running = true;
 
@@ -79,9 +77,7 @@ void MotorController::stop()
 {
     stepper.setSpeed(0.0f);
     stepper.stop();
-
-    running = false;
-    speedMode = false;
+    disable();
 }
 
 bool MotorController::isRunning() const
