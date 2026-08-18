@@ -8,7 +8,7 @@
 //====================================================
 
 #define PROJECT_NAME "GoldTester"
-#define PROJECT_VERSION "2.3.0"
+#define PROJECT_VERSION "2.4.0"
 
 //====================================================
 // Display Configuration
@@ -34,14 +34,15 @@ constexpr float MAX_VIRTUAL_FORCE_KG = 99.999f;
 // Motor Configuration
 //====================================================
 
-constexpr float MOTOR_MAX_SPEED = 2000.0f;
-constexpr float MOTOR_NORMAL_SPEED = 700.0f;
-constexpr float MOTOR_RETURN_SPEED = 700.0f;
-constexpr float MOTOR_ACCELERATION = 800.0f;
+// Deliberately reduced for smoother, more reliable motion.
+constexpr float MOTOR_MAX_SPEED = 1000.0f;
+constexpr float MOTOR_NORMAL_SPEED = 400.0f;
+constexpr float MOTOR_RETURN_SPEED = 400.0f;
+constexpr float MOTOR_ACCELERATION = 300.0f;
 
 // Manual movement
-constexpr long MANUAL_STEP_STEPS = 200;
-constexpr float MANUAL_HOLD_SPEED = 700.0f;
+constexpr long MANUAL_STEP_STEPS = 150;
+constexpr float MANUAL_HOLD_SPEED = 400.0f;
 
 //====================================================
 // Mode / Button Configuration
