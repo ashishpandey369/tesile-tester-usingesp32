@@ -182,7 +182,11 @@ void MachineController::refreshDisplay()
     else if (state == MachineState::READY)
     {
         display.setMachineStatus("READY");
-        display.setMotorStatus("STOP");
+
+        if (motor.isRunning())
+            display.setMotorStatus("MANUAL");
+        else
+            display.setMotorStatus("STOP");
     }
     else
     {
