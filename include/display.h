@@ -41,6 +41,7 @@ private:
     unsigned long lastRefresh = 0;
 
     void drawLayout();
+    void drawLogo();
     void drawForce();
     void drawMode();
     void drawMotor();
