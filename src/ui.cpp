@@ -22,6 +22,49 @@ void UIManager::update()
     downHoldState = (currentDown == LOW);
     startState = (currentStart == LOW);
 
+    upLongState = false;
+    downLongState = false;
+
+    if (currentUp == LOW)
+    {
+        if (lastUp == HIGH)
+        {
+            upHoldStart = millis();
+            upLongConsumed = false;
+        }
+
+        if (!upLongConsumed &&
+            (millis() - upHoldStart >= BUTTON_LONG_PRESS_MS))
+        {
+            upLongState = true;
+            upLongConsumed = true;
+        }
+    }
+    else
+    {
+        upLongConsumed = false;
+    }
+
+    if (currentDown == LOW)
+    {
+        if (lastDown == HIGH)
+        {
+            downHoldStart = millis();
+            downLongConsumed = false;
+        }
+
+        if (!downLongConsumed &&
+            (millis() - downHoldStart >= BUTTON_LONG_PRESS_MS))
+        {
+            downLongState = true;
+            downLongConsumed = true;
+        }
+    }
+    else
+    {
+        downLongConsumed = false;
+    }
+
     // UP + DOWN held together = mode change.
     if (currentUp == LOW && currentDown == LOW)
     {
@@ -76,6 +119,16 @@ bool UIManager::upHeld() const
 bool UIManager::downHeld() const
 {
     return downHoldState;
+}
+
+bool UIManager::upLongHeld() const
+{
+    return upLongState;
+}
+
+bool UIManager::downLongHeld() const
+{
+    return downLongState;
 }
 
 bool UIManager::modeLongPressed()
