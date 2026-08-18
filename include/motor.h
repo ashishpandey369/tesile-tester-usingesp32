@@ -10,64 +10,25 @@
 class MotorController
 {
 public:
-    //------------------------------------------------
-    // Initialization
-    //------------------------------------------------
-
     void begin();
-
     void update();
 
-    //------------------------------------------------
-    // Enable / Disable
-    //------------------------------------------------
-
     void enable();
-
     void disable();
 
-    //------------------------------------------------
-    // Motion
-    //------------------------------------------------
+    // Continuous test motion. direction: +1 forward, -1 backward.
+    void runContinuous(int direction, float speed);
 
-    // Starts a pull in CONSTANT-SPEED mode (see rampToSpeed()). This is
-    // what avoids AccelStepper's internal acceleration engine glitching
-    // when the target speed is changed frequently/abruptly.
-    void moveForward();
+    // One manual positioning step. direction: +1 or -1.
+    void manualStep(int direction);
 
-    // Position-mode move (kept for completeness / manual jogging)
-    void moveBackward();
+    // Continuous manual movement while a button is held.
+    void manualHold(int direction);
 
-    // Immediate stop -- no ramp-down. Used the instant target force is
-    // reached so there's no overshoot.
     void stop();
 
-    // Drive back to position 0 (the position recorded at boot). Uses
-    // AccelStepper's normal position mode with its own acceleration.
-    void returnHome();
-
-    //------------------------------------------------
-    // Speed
-    //------------------------------------------------
-
-    // Legacy direct setter (kept for compatibility) -- prefer
-    // rampToSpeed() during RUNNING for a glitch-free profile.
-    void setSpeed(float speed);
-
-    // Smoothly slides the current speed toward targetSpeed, limited to
-    // MOTOR_ACCELERATION steps/s^2, based on real elapsed time. Call
-    // this every loop tick while pulling; it never jumps.
-    void rampToSpeed(float targetSpeed);
-
-    //------------------------------------------------
-    // Status
-    //------------------------------------------------
-
     bool isRunning() const;
-
-    // True once the stepper has arrived at its current moveTo() target
-    // (position mode only -- used for returnHome())
-    bool isAtTarget();
+    long getCurrentPosition() const;
 
 private:
     AccelStepper stepper = AccelStepper(
@@ -76,13 +37,7 @@ private:
         DIR_PIN);
 
     bool running = false;
-
-    // true while pulling (constant-speed mode via runSpeed()),
-    // false while homing/jogging (position mode via run())
     bool speedMode = false;
-
-    float currentSpeed = 0.0f;
-    unsigned long lastRampTime = 0;
 };
 
 extern MotorController motor;
