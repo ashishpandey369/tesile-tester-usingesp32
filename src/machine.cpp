@@ -17,41 +17,39 @@ void MachineController::begin()
 
 void MachineController::update()
 {
-    // Toggle switch is the master machine control.
-    if (ui.startOn())
+    // The toggle switch is the master machine control.
+    // OFF always wins over every other command.
+    if (!ui.startOn())
     {
-        if (state != MachineState::RUNNING)
-            startTestMotion();
+        if (state == MachineState::RUNNING)
+            stopTestMotion();
 
-        updateVirtualForce();
+        if (ui.modeLongPressed())
+        {
+            resetCurrentForce();
+            toggleMode();
+        }
+        else
+        {
+            updateManualControl();
+        }
+
         refreshDisplay();
         return;
     }
 
-    // OFF is an immediate stop. The current test value remains visible
-    // until the next manual button interaction resets it to zero.
-    if (state == MachineState::RUNNING)
-        stopTestMotion();
+    // Toggle ON: automatic test motion takes over according to the mode.
+    if (state != MachineState::RUNNING)
+        startTestMotion();
 
-    if (ui.modeLongPressed())
-    {
-        resetCurrentForce();
-        toggleMode();
-        motor.stop();
-        state = MachineState::STOP;
-        refreshDisplay();
-        return;
-    }
-
-    updateManualControl();
+    updateVirtualForce();
     refreshDisplay();
 }
 
 void MachineController::updateManualControl()
 {
-    // Any manual button interaction after a test stop starts a fresh
-    // software test cycle.
-    if (ui.upPressed() || ui.downPressed() || ui.upHeld() || ui.downHeld())
+    // A manual button after STOP starts a fresh test cycle.
+    if (ui.upPressed() || ui.downPressed() || ui.upLongHeld() || ui.downLongHeld())
     {
         if (state == MachineState::STOP)
             resetCurrentForce();
@@ -59,19 +57,23 @@ void MachineController::updateManualControl()
         state = MachineState::STOP;
     }
 
-    // Do not jog while both buttons are being held for mode selection.
+    // Both buttons together are reserved for mode selection.
     if (ui.upHeld() && ui.downHeld())
     {
         motor.stop();
         return;
     }
 
+    // Short press = one fixed step. After the long-press threshold,
+    // continuous motion continues until the button is released.
     if (ui.upHeld())
     {
         if (ui.upPressed())
             motor.manualStep(+1);
-        else
+        else if (ui.upLongHeld())
             motor.manualHold(+1);
+        else
+            motor.stop();
 
         return;
     }
@@ -80,8 +82,10 @@ void MachineController::updateManualControl()
     {
         if (ui.downPressed())
             motor.manualStep(-1);
-        else
+        else if (ui.downLongHeld())
             motor.manualHold(-1);
+        else
+            motor.stop();
 
         return;
     }
@@ -94,7 +98,6 @@ void MachineController::startTestMotion()
     int direction = (mode == MachineMode::TENSILE) ? +1 : -1;
 
     motor.runContinuous(direction, MOTOR_NORMAL_SPEED);
-
     lastRunPosition = motor.getCurrentPosition();
     state = MachineState::RUNNING;
 }
@@ -130,15 +133,9 @@ void MachineController::updateVirtualForce()
 void MachineController::toggleMode()
 {
     if (mode == MachineMode::TENSILE)
-    {
         mode = MachineMode::PUSH;
-        display.setMode("PUSH");
-    }
     else
-    {
         mode = MachineMode::TENSILE;
-        display.setMode("TENSILE");
-    }
 }
 
 void MachineController::refreshDisplay()
