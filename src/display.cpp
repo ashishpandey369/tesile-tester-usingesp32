@@ -12,7 +12,6 @@ DisplayManager display;
 #define HEADER_Y 8
 #define HEADER_LINE_Y 48
 
-// 2 x 2 content grid. Each field has its own box and refresh zone.
 #define GRID_X 14
 #define GRID_Y 58
 #define GRID_W 452
@@ -40,7 +39,6 @@ void DisplayManager::update()
         return;
 
     lastRefresh = millis();
-
     if (!layoutDrawn)
         return;
 
@@ -54,7 +52,6 @@ void DisplayManager::clear()
 {
     tft.fillScreen(TFT_BLACK);
     layoutDrawn = false;
-
     lastForce = -9999.0f;
     lastMode = "";
     lastMotor = "";
@@ -64,15 +61,12 @@ void DisplayManager::clear()
 void DisplayManager::showBootScreen()
 {
     clear();
-
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
     tft.drawCentreString("GOLD TESTER", 240, 88, 4);
-
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.drawCentreString("ESP32 TENSILE TESTER", 240, 132, 2);
     tft.drawCentreString("Initializing...", 240, 178, 2);
-
     delay(BOOT_SCREEN_TIME);
     showHomeScreen();
 }
@@ -80,12 +74,10 @@ void DisplayManager::showBootScreen()
 void DisplayManager::showHomeScreen()
 {
     clear();
-
     currentForce = INITIAL_CURRENT_FORCE;
     mode = "TENSILE";
     motorStatus = "STOP";
     machineStatus = "READY";
-
     drawLayout();
     drawForce();
     drawMode();
@@ -96,11 +88,9 @@ void DisplayManager::showHomeScreen()
 void DisplayManager::showErrorScreen(const String &msg)
 {
     clear();
-
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_RED, TFT_BLACK);
     tft.drawCentreString("SYSTEM STOP", 240, 72, 4);
-
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.drawCentreString(msg, 240, 135, 2);
     tft.drawCentreString("TURN SWITCH OFF", 240, 200, 2);
@@ -110,35 +100,28 @@ void DisplayManager::showErrorScreen(const String &msg)
 void DisplayManager::drawLayout()
 {
     layoutDrawn = true;
-
     tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(TL_DATUM);
 
-    // Outer machine display border.
     tft.drawRoundRect(OUTER_X, OUTER_Y, OUTER_W, OUTER_H, 5, TFT_WHITE);
 
-    // Header.
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
     tft.drawCentreString("GOLD TESTER", 240, HEADER_Y + 10, 4);
     tft.drawFastHLine(OUTER_X + 8, HEADER_LINE_Y, OUTER_W - 16, TFT_DARKGREY);
 
-    // Four separate fields, matching the proven large-value/small-label style
-    // from the supplied reference display.
     tft.drawRoundRect(LEFT_X, TOP_Y, CELL_W, CELL_H, 5, TFT_WHITE);
     tft.drawRoundRect(RIGHT_X, TOP_Y, CELL_W, CELL_H, 5, TFT_WHITE);
     tft.drawRoundRect(LEFT_X, BOTTOM_Y, CELL_W, CELL_H, 5, TFT_WHITE);
     tft.drawRoundRect(RIGHT_X, BOTTOM_Y, CELL_W, CELL_H, 5, TFT_WHITE);
 
-    // Labels.
-    tft.setTextDatum(MC_DATUM);
+    // Keep labels safely above their live-value refresh regions.
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    tft.drawCentreString("CURRENT FORCE", LEFT_X + CELL_W / 2, TOP_Y + 18, 2);
-    tft.drawCentreString("MODE", RIGHT_X + CELL_W / 2, TOP_Y + 18, 2);
-    tft.drawCentreString("MOTOR", LEFT_X + CELL_W / 2, BOTTOM_Y + 18, 2);
-    tft.drawCentreString("MACHINE STATUS", RIGHT_X + CELL_W / 2, BOTTOM_Y + 18, 2);
+    tft.drawCentreString("CURRENT FORCE", LEFT_X + CELL_W / 2, TOP_Y + 14, 2);
+    tft.drawCentreString("MODE", RIGHT_X + CELL_W / 2, TOP_Y + 14, 2);
+    tft.drawCentreString("MOTOR", LEFT_X + CELL_W / 2, BOTTOM_Y + 14, 2);
+    tft.drawCentreString("MACHINE STATUS", RIGHT_X + CELL_W / 2, BOTTOM_Y + 14, 2);
 
-    // Small bottom instruction line, kept outside the four live fields.
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     tft.drawCentreString("UP / DOWN = MANUAL     SWITCH = TEST", 240, 246, 1);
     tft.drawCentreString("RESET / MODE = RESET OR SELECT MODE", 240, 266, 1);
@@ -148,37 +131,33 @@ void DisplayManager::drawForce()
 {
     if (currentForce == lastForce)
         return;
-
     lastForce = currentForce;
 
-    const int16_t x = LEFT_X + 3;
-    const int16_t y = TOP_Y + 28;
-    const int16_t w = CELL_W - 6;
-    const int16_t h = CELL_H - 32;
+    // Start below the label. The previous refresh rectangle was covering
+    // the lower half of CURRENT FORCE and the other labels.
+    const int16_t x = LEFT_X + 4;
+    const int16_t y = TOP_Y + 29;
+    const int16_t w = CELL_W - 8;
+    const int16_t h = CELL_H - 34;
 
     tft.fillRect(x, y, w, h, TFT_BLACK);
 
-    // Large primary value, following the supplied reference's Font-7 style,
-    // but reduced one step so the complete value plus kg fits comfortably.
     String value = String(currentForce, 3);
     String unit = "kg";
     const uint8_t valueFont = 6;
     const uint8_t unitFont = 3;
-
-    tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    const int16_t gap = 6;
 
     int16_t valueW = tft.textWidth(value, valueFont);
     int16_t unitW = tft.textWidth(unit, unitFont);
-    int16_t gap = 5;
     int16_t totalW = valueW + gap + unitW;
-    int16_t startX = LEFT_X + CELL_W / 2 - totalW / 2;
-    int16_t centerY = TOP_Y + 53;
+    int16_t startX = LEFT_X + (CELL_W - totalW) / 2;
+    int16_t centerY = TOP_Y + 55;
 
     tft.setTextDatum(ML_DATUM);
+    tft.setTextColor(TFT_CYAN, TFT_BLACK);
     tft.drawString(value, startX, centerY, valueFont);
 
-    tft.setTextDatum(ML_DATUM);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.drawString(unit, startX + valueW + gap, centerY + 4, unitFont);
 }
@@ -187,14 +166,12 @@ void DisplayManager::drawMode()
 {
     if (mode == lastMode)
         return;
-
     lastMode = mode;
 
-    const int16_t x = RIGHT_X + 3;
-    const int16_t y = TOP_Y + 30;
-    const int16_t w = CELL_W - 6;
+    const int16_t x = RIGHT_X + 4;
+    const int16_t y = TOP_Y + 29;
+    const int16_t w = CELL_W - 8;
     const int16_t h = CELL_H - 34;
-
     tft.fillRect(x, y, w, h, TFT_BLACK);
 
     tft.setTextDatum(MC_DATUM);
@@ -206,20 +183,17 @@ void DisplayManager::drawMotor()
 {
     if (motorStatus == lastMotor)
         return;
-
     lastMotor = motorStatus;
 
-    const int16_t x = LEFT_X + 3;
-    const int16_t y = BOTTOM_Y + 30;
-    const int16_t w = CELL_W - 6;
+    const int16_t x = LEFT_X + 4;
+    const int16_t y = BOTTOM_Y + 29;
+    const int16_t w = CELL_W - 8;
     const int16_t h = CELL_H - 34;
-
     tft.fillRect(x, y, w, h, TFT_BLACK);
 
     String displayMotor = motorStatus;
     uint16_t color = TFT_YELLOW;
 
-    // Display-only inversion. Physical motor direction is unchanged.
     if (motorStatus == "UP")
     {
         displayMotor = "DOWN";
@@ -245,25 +219,19 @@ void DisplayManager::drawStatus()
 {
     if (machineStatus == lastStatus)
         return;
-
     lastStatus = machineStatus;
 
-    const int16_t x = RIGHT_X + 3;
-    const int16_t y = BOTTOM_Y + 30;
-    const int16_t w = CELL_W - 6;
+    const int16_t x = RIGHT_X + 4;
+    const int16_t y = BOTTOM_Y + 29;
+    const int16_t w = CELL_W - 8;
     const int16_t h = CELL_H - 34;
-
     tft.fillRect(x, y, w, h, TFT_BLACK);
 
     uint16_t color = TFT_WHITE;
-    if (machineStatus == "READY")
-        color = TFT_GREEN;
-    else if (machineStatus == "RUNNING")
-        color = TFT_CYAN;
-    else if (machineStatus == "STOP")
-        color = TFT_RED;
-    else if (machineStatus == "TURN OFF")
-        color = TFT_ORANGE;
+    if (machineStatus == "READY") color = TFT_GREEN;
+    else if (machineStatus == "RUNNING") color = TFT_CYAN;
+    else if (machineStatus == "STOP") color = TFT_RED;
+    else if (machineStatus == "TURN OFF") color = TFT_ORANGE;
 
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(color, TFT_BLACK);
@@ -272,12 +240,8 @@ void DisplayManager::drawStatus()
 
 void DisplayManager::setCurrentForce(float value)
 {
-    if (value < 0.0f)
-        value = 0.0f;
-
-    if (value > MAX_VIRTUAL_FORCE_KG)
-        value = MAX_VIRTUAL_FORCE_KG;
-
+    if (value < 0.0f) value = 0.0f;
+    if (value > MAX_VIRTUAL_FORCE_KG) value = MAX_VIRTUAL_FORCE_KG;
     currentForce = value;
 }
 
