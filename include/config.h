@@ -8,7 +8,7 @@
 //====================================================
 
 #define PROJECT_NAME "GoldTester"
-#define PROJECT_VERSION "2.0.0"
+#define PROJECT_VERSION "2.1.0"
 
 //====================================================
 // Display Configuration
@@ -16,8 +16,8 @@
 
 constexpr uint16_t SCREEN_WIDTH = 480;
 constexpr uint16_t SCREEN_HEIGHT = 320;
-constexpr uint16_t DISPLAY_REFRESH_MS = 100;
-constexpr uint8_t DISPLAY_ROTATION = 1;
+constexpr uint16_t DISPLAY_REFRESH_MS = 50;
+constexpr uint8_t DISPLAY_ROTATION = 3;
 
 //====================================================
 // Virtual Test Value
@@ -41,16 +41,16 @@ constexpr float MOTOR_ACCELERATION = 1000.0f;
 
 // Manual movement
 constexpr long MANUAL_STEP_STEPS = 100;
-constexpr float MANUAL_HOLD_SPEED = 600.0f;
+constexpr float MANUAL_HOLD_SPEED = 900.0f;
 
 //====================================================
 // Mode / Button Configuration
 //====================================================
 
-constexpr uint16_t BUTTON_LONG_PRESS_MS = 1200;
+constexpr uint16_t BUTTON_LONG_PRESS_MS = 400;
 constexpr uint16_t BUTTON_DEBOUNCE_MS = 30;
 
-// Holding UP + DOWN together changes between TENSILE and PUSH.
+// Hold either UP or DOWN while turning the toggle ON to change mode.
 
 //====================================================
 // Machine Timing
