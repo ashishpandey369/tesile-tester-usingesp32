@@ -8,6 +8,7 @@ void MachineController::begin()
     currentForce = INITIAL_CURRENT_FORCE;
     mode = MachineMode::TENSILE;
     state = MachineState::READY;
+    modeChangeLock = false;
 
     display.setCurrentForce(currentForce);
     display.setMode("TENSILE");
@@ -17,23 +18,46 @@ void MachineController::begin()
 
 void MachineController::update()
 {
-    // The toggle switch is the master machine control.
-    // OFF always wins over every other command.
+    // Toggle OFF is the master stop. It always wins over movement.
     if (!ui.startOn())
     {
         if (state == MachineState::RUNNING)
             stopTestMotion();
 
-        if (ui.modeLongPressed())
+        // Turning the switch OFF after a mode change releases the lock
+        // and resets the test value for the next manual positioning cycle.
+        if (modeChangeLock)
         {
+            modeChangeLock = false;
             resetCurrentForce();
-            toggleMode();
+            state = MachineState::READY;
         }
         else
         {
             updateManualControl();
         }
 
+        refreshDisplay();
+        return;
+    }
+
+    // While the switch is ON, holding either button during switch-on
+    // selects the next mode. The motor must remain stopped until the
+    // user turns the switch OFF again.
+    if (ui.modeChangeRequested())
+    {
+        motor.stop();
+        toggleMode();
+        modeChangeLock = true;
+        state = MachineState::STOP;
+        refreshDisplay();
+        return;
+    }
+
+    if (modeChangeLock)
+    {
+        motor.stop();
+        state = MachineState::STOP;
         refreshDisplay();
         return;
     }
@@ -48,49 +72,51 @@ void MachineController::update()
 
 void MachineController::updateManualControl()
 {
-    // A manual button after STOP starts a fresh test cycle.
+    // Any manual button after STOP starts a fresh test cycle.
     if (ui.upPressed() || ui.downPressed() || ui.upLongHeld() || ui.downLongHeld())
     {
         if (state == MachineState::STOP)
             resetCurrentForce();
 
-        state = MachineState::STOP;
+        if (state != MachineState::READY && currentForce != INITIAL_CURRENT_FORCE)
+            resetCurrentForce();
+
+        state = MachineState::READY;
     }
 
-    // Both buttons together are reserved for mode selection.
-    if (ui.upHeld() && ui.downHeld())
+    // A short press commands one complete fixed step. Do not stop it on
+    // the following loop; AccelStepper must be allowed to finish the move.
+    if (ui.upPressed())
+    {
+        motor.manualStep(+1);
+        return;
+    }
+
+    if (ui.downPressed())
+    {
+        motor.manualStep(-1);
+        return;
+    }
+
+    // Long hold begins continuous movement after the short-press window.
+    if (ui.upLongHeld())
+    {
+        motor.manualHold(+1);
+        return;
+    }
+
+    if (ui.downLongHeld())
+    {
+        motor.manualHold(-1);
+        return;
+    }
+
+    // Release stops continuous manual movement. A completed short step
+    // is allowed to finish in motor.update().
+    if (!ui.upHeld() && !ui.downHeld())
     {
         motor.stop();
-        return;
     }
-
-    // Short press = one fixed step. After the long-press threshold,
-    // continuous motion continues until the button is released.
-    if (ui.upHeld())
-    {
-        if (ui.upPressed())
-            motor.manualStep(+1);
-        else if (ui.upLongHeld())
-            motor.manualHold(+1);
-        else
-            motor.stop();
-
-        return;
-    }
-
-    if (ui.downHeld())
-    {
-        if (ui.downPressed())
-            motor.manualStep(-1);
-        else if (ui.downLongHeld())
-            motor.manualHold(-1);
-        else
-            motor.stop();
-
-        return;
-    }
-
-    motor.stop();
 }
 
 void MachineController::startTestMotion()
@@ -143,7 +169,12 @@ void MachineController::refreshDisplay()
     display.setCurrentForce(currentForce);
     display.setMode(mode == MachineMode::TENSILE ? "TENSILE" : "PUSH");
 
-    if (state == MachineState::RUNNING)
+    if (modeChangeLock)
+    {
+        display.setMachineStatus("TURN OFF");
+        display.setMotorStatus("STOP");
+    }
+    else if (state == MachineState::RUNNING)
     {
         display.setMachineStatus("RUNNING");
         display.setMotorStatus(mode == MachineMode::TENSILE ? "FORWARD" : "BACKWARD");
