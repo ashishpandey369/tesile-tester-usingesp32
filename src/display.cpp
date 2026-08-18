@@ -135,40 +135,13 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    // Dedicated force value area. Clear only this region to avoid flicker.
-    const int16_t areaX = CONTENT_L;
-    const int16_t areaY = 88;
-    const int16_t areaW = 220;
-    const int16_t areaH = 58;
+    // Restore the proven force rendering from 40cb1fab...
+    // Only the font is reduced from 6 to 5 as previously requested.
+    tft.fillRect(CONTENT_L, 90, 220, 55, TFT_BLACK);
 
-    tft.fillRect(areaX, areaY, areaW, areaH, TFT_BLACK);
-
-    // Always keep the complete numeric value visible with leading zeroes.
-    char valueBuffer[20];
-    snprintf(valueBuffer, sizeof(valueBuffer), "%06.3f", (double)currentForce);
-
-    const String value = String(valueBuffer);
-    const int numberSize = 5;
-    const int unitSize = 3;
-    const int16_t gap = 5;
-
-    const int16_t numberWidth = tft.textWidth(value, numberSize);
-    const int16_t unitWidth = tft.textWidth("kg", unitSize);
-    const int16_t totalWidth = numberWidth + gap + unitWidth;
-
-    // Center the complete "00.000 kg" block inside the force area.
-    int16_t startX = areaX + (areaW - totalWidth) / 2;
-    if (startX < areaX + 2)
-        startX = areaX + 2;
-
-    const int16_t baselineY = areaY + areaH / 2;
-
-    tft.setTextDatum(ML_DATUM);
+    tft.setTextDatum(TL_DATUM);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    tft.drawString(value, startX, baselineY, numberSize);
-
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString("kg", startX + numberWidth + gap, baselineY, unitSize);
+    tft.drawString(String(currentForce, 3) + " kg", CONTENT_L, 95, 5);
 }
 
 void DisplayManager::drawMode()
