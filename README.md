@@ -6,7 +6,9 @@ An ESP32-based tensile/push testing machine using a motor-driven mechanism, ILI9
 
 ## Current Version
 
-**v2.0.0 — Motion-Controlled Tester**
+**v2.9.8 — READY FOR DEMONSTRATION**
+
+The current machine functions are considered ready for demonstration/testing. The remaining display polish items are the **company/project logo** and the **kg unit symbol** in the Current Force field.
 
 The physical load cell and HX711 have been removed from the active machine architecture.
 
@@ -14,28 +16,44 @@ The physical load cell and HX711 have been removed from the active machine archi
 
 - **UP button:** one manual step; hold for continuous UP movement.
 - **DOWN button:** one manual step; hold for continuous DOWN movement.
-- **UP + DOWN long press:** change between `TENSILE` and `PUSH` mode.
+- **RESET/MODE button:** resets the current-force test value when required, or selects mode when the force is zero.
 - **START/STOP toggle:** master machine control. ON starts automatic motion; OFF stops the motor immediately.
 
 ## Modes
 
 ### TENSILE
-Automatic toggle-controlled motion runs the motor forward for the pull/tensile test.
+Automatic toggle-controlled motion runs the motor for the pull/tensile test.
 
 ### PUSH
-Automatic toggle-controlled motion runs the motor backward for the push test.
+Automatic toggle-controlled motion runs the motor for the push test.
 
 ## Current Force Display
 
-`Current Force` is now a **software test-point value**, not a physical load measurement. It starts at `00.000 kg`, does not change during manual positioning, and increases from motor movement only while the master toggle is ON.
+`Current Force` is a **software test-point value**, not a physical load measurement. It starts at `00.000`, does not change during manual positioning, and increases from motor movement only while the master toggle is ON.
 
-When the toggle is turned OFF, the last value remains visible. The next UP/DOWN interaction resets the value to `00.000 kg` for the next test cycle.
+When the toggle is turned OFF, the last value remains visible. The next required reset interaction returns the value to `00.000` for the next test cycle.
 
 ## Display Status
 
-- `READY` — initial powered state.
+- `READY` — initial powered state and ready for the next test.
 - `RUNNING` — toggle is ON and automatic motion is active.
 - `STOP` — toggle is OFF after operation.
+
+## Display Layout
+
+The main display uses four separate boxed fields:
+
+- **Current Force**
+- **Mode**
+- **Motor Status**
+- **Machine Status**
+
+Each field is refreshed independently to keep the display stable and reduce flicker.
+
+## Remaining UI Polish
+
+- Add the final company/project logo.
+- Restore/show the `kg` unit symbol beside the Current Force value.
 
 ## Hardware
 
@@ -46,6 +64,7 @@ When the toggle is turned OFF, the last value remains visible. The next UP/DOWN 
 - Buzzer
 - UP button
 - DOWN button
+- RESET/MODE button
 - START/STOP toggle switch
 
 ## Pin Summary
@@ -54,6 +73,7 @@ When the toggle is turned OFF, the last value remains visible. The next UP/DOWN 
 |---|---:|
 | UP | 21 |
 | DOWN | 22 |
+| RESET/MODE | 26 |
 | START/STOP | 13 |
 | Buzzer | 14 |
 | STEP | 25 |
