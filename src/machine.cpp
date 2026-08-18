@@ -11,6 +11,7 @@ void MachineController::begin()
     modeChangeLock = false;
     resetPending = false;
     manualContinuousActive = false;
+    motorDisplayDirection = "STOP";
 
     display.setCurrentForce(currentForce);
     display.setMode("TENSILE");
@@ -26,6 +27,7 @@ void MachineController::update()
         {
             motor.stop();
             manualContinuousActive = false;
+            motorDisplayDirection = "STOP";
             resetCurrentForce();
 
             if (ui.startOn())
@@ -47,6 +49,7 @@ void MachineController::update()
         {
             motor.stop();
             manualContinuousActive = false;
+            motorDisplayDirection = "STOP";
             toggleMode();
             state = MachineState::READY;
             refreshDisplay();
@@ -65,6 +68,7 @@ void MachineController::update()
             resetPending = true;
             manualContinuousActive = false;
             motor.stop();
+            motorDisplayDirection = "STOP";
             state = MachineState::STOP;
         }
 
@@ -77,6 +81,7 @@ void MachineController::update()
     {
         motor.stop();
         manualContinuousActive = false;
+        motorDisplayDirection = "STOP";
 
         if (ui.requestedModeDirection() < 0)
             mode = MachineMode::TENSILE;
@@ -93,6 +98,7 @@ void MachineController::update()
     if (modeChangeLock)
     {
         motor.stop();
+        motorDisplayDirection = "STOP";
         state = MachineState::STOP;
         refreshDisplay();
         return;
@@ -120,6 +126,7 @@ void MachineController::updateManualControl()
     if (upPressed)
     {
         manualContinuousActive = false;
+        motorDisplayDirection = "UP";
         motor.manualStep(+1);
         state = MachineState::READY;
         return;
@@ -128,6 +135,7 @@ void MachineController::updateManualControl()
     if (downPressed)
     {
         manualContinuousActive = false;
+        motorDisplayDirection = "DOWN";
         motor.manualStep(-1);
         state = MachineState::READY;
         return;
@@ -136,6 +144,7 @@ void MachineController::updateManualControl()
     if (ui.upLongHeld())
     {
         manualContinuousActive = true;
+        motorDisplayDirection = "UP";
         state = MachineState::READY;
         motor.manualHold(+1);
         return;
@@ -144,6 +153,7 @@ void MachineController::updateManualControl()
     if (ui.downLongHeld())
     {
         manualContinuousActive = true;
+        motorDisplayDirection = "DOWN";
         state = MachineState::READY;
         motor.manualHold(-1);
         return;
@@ -153,6 +163,7 @@ void MachineController::updateManualControl()
     {
         manualContinuousActive = false;
         motor.stop();
+        motorDisplayDirection = "STOP";
     }
 }
 
@@ -164,12 +175,14 @@ void MachineController::startTestMotion()
 
     motor.runContinuous(direction, MANUAL_HOLD_SPEED);
     lastRunPosition = motor.getCurrentPosition();
+    motorDisplayDirection = (mode == MachineMode::TENSILE) ? "UP" : "DOWN";
     state = MachineState::RUNNING;
 }
 
 void MachineController::stopTestMotion()
 {
     motor.stop();
+    motorDisplayDirection = "STOP";
     state = MachineState::STOP;
 }
 
@@ -221,18 +234,12 @@ void MachineController::refreshDisplay()
     else if (state == MachineState::RUNNING)
     {
         display.setMachineStatus("RUNNING");
-        display.setMotorStatus(mode == MachineMode::TENSILE ? "UP" : "DOWN");
+        display.setMotorStatus(motorDisplayDirection);
     }
     else if (state == MachineState::READY)
     {
         display.setMachineStatus("READY");
-
-        if (ui.upHeld() || motor.isRunning())
-            display.setMotorStatus("UP");
-        else if (ui.downHeld())
-            display.setMotorStatus("DOWN");
-        else
-            display.setMotorStatus("STOP");
+        display.setMotorStatus(motorDisplayDirection);
     }
     else
     {
