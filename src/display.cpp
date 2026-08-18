@@ -135,36 +135,34 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    // Dedicated force panel. The complete value is centered inside it.
+    // Dedicated force panel. Use a fixed, known-safe font size and
+    // center the complete value and unit as one visual block.
     const int16_t panelX = 20;
-    const int16_t panelY = 86;
+    const int16_t panelY = 84;
     const int16_t panelW = 240;
-    const int16_t panelH = 58;
+    const int16_t panelH = 62;
 
     tft.fillRect(panelX, panelY, panelW, panelH, TFT_BLACK);
 
-    String value = String(currentForce, 3);
-    const int numberSize = 5;
-    const int unitSize = 3;
-    const int16_t gap = 6;
+    String forceText = String(currentForce, 3) + " kg";
 
-    int16_t numberWidth = tft.textWidth(value, numberSize);
-    int16_t unitWidth = tft.textWidth("kg", unitSize);
-    int16_t totalWidth = numberWidth + gap + unitWidth;
+    // Font 4 is deliberately used here so the entire "00.000 kg"
+    // string always fits inside the 240 px force panel.
+    const int textSize = 4;
+    int16_t textWidth = tft.textWidth(forceText, textSize);
 
-    // Center the complete "00.000 kg" string in the left panel.
-    int16_t startX = panelX + (panelW - totalWidth) / 2;
-
-    if (startX < panelX + 4)
-        startX = panelX + 4;
+    int16_t x = panelX + (panelW - textWidth) / 2;
+    if (x < panelX + 2)
+        x = panelX + 2;
 
     tft.setTextDatum(ML_DATUM);
-
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    tft.drawString(value, startX, 115, numberSize);
+    tft.drawString(String(currentForce, 3), x, 115, textSize);
 
+    // Draw kg immediately after the measured numeric value.
+    int16_t numberWidth = tft.textWidth(String(currentForce, 3), textSize);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString("kg", startX + numberWidth + gap, 115, unitSize);
+    tft.drawString(" kg", x + numberWidth, 115, textSize);
 }
 
 void DisplayManager::drawMode()
@@ -193,8 +191,6 @@ void DisplayManager::drawMotor()
 
     lastMotor = motorStatus;
 
-    // Dedicated motor-status panel. It is updated only when the actual
-    // motor state changes, preventing full-screen flicker.
     tft.fillRect(CONTENT_L, 181, 230, 38, TFT_BLACK);
 
     uint16_t color = TFT_YELLOW;
