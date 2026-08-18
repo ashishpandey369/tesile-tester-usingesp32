@@ -26,7 +26,6 @@ void DisplayManager::update()
     if (!layoutDrawn)
         return;
 
-    // Keep each UI region independent. Do not render one region over another.
     drawForce();
     drawMode();
     drawMotor();
@@ -59,6 +58,7 @@ void DisplayManager::showBootScreen()
     tft.drawCentreString("Initializing...", 240, 180, 2);
 
     delay(BOOT_SCREEN_TIME);
+
     showHomeScreen();
 }
 
@@ -128,13 +128,10 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    // Force has its own isolated rectangle. Nothing else is drawn here.
-    tft.fillRect(CONTENT_L, 90, 220, 55, TFT_BLACK);
-
-    tft.setTextDatum(TL_DATUM);
+    // Restored directly from the known-good 40cb1fab layout.
+    // Only the font was reduced from 6 to 5 as previously requested.
+    tft.fillRect(CONTENT_L, 90, 210, 55, TFT_BLACK);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
-
-    // Proven working position and size, with kg attached.
     tft.drawString(String(currentForce, 3) + " kg", CONTENT_L, 96, 5);
 }
 
@@ -146,7 +143,6 @@ void DisplayManager::drawMode()
     lastMode = mode;
 
     tft.fillRect(250, 90, 210, 55, TFT_BLACK);
-    tft.setTextDatum(TL_DATUM);
     tft.setTextColor(mode == "TENSILE" ? TFT_GREEN : TFT_ORANGE, TFT_BLACK);
     tft.drawString(mode, 250, 105, 4);
 }
@@ -160,10 +156,10 @@ void DisplayManager::drawMotor()
 
     tft.fillRect(CONTENT_L, 200, 210, 35, TFT_BLACK);
 
+    // Display-only inversion. Physical motor direction is unchanged.
     String displayMotor = motorStatus;
     uint16_t color = TFT_YELLOW;
 
-    // Display-only inversion. Physical motor direction is unchanged.
     if (motorStatus == "UP")
     {
         displayMotor = "DOWN";
@@ -180,7 +176,6 @@ void DisplayManager::drawMotor()
         color = TFT_YELLOW;
     }
 
-    tft.setTextDatum(TL_DATUM);
     tft.setTextColor(color, TFT_BLACK);
     tft.drawString(displayMotor, CONTENT_L, 205, 3);
 }
@@ -204,9 +199,14 @@ void DisplayManager::drawStatus()
     else if (machineStatus == "TURN OFF")
         color = TFT_ORANGE;
 
-    tft.setTextDatum(TL_DATUM);
     tft.setTextColor(color, TFT_BLACK);
     tft.drawString(machineStatus, 250, 205, 3);
+
+    if (machineStatus == "TURN OFF")
+    {
+        tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+        tft.drawCentreString("TURN SWITCH OFF", 240, 230, 2);
+    }
 }
 
 void DisplayManager::setCurrentForce(float value)
