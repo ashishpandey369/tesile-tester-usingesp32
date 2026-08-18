@@ -38,6 +38,7 @@ private:
     long lastRunPosition = 0;
 
     bool modeChangeLock = false;
+    bool resetPending = false;
     bool manualContinuousActive = false;
 
     void updateManualControl();
