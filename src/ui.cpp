@@ -1,25 +1,13 @@
 #include "ui.h"
-#include "config.h"
 
 UIManager ui;
-
-//====================================================
-// Initialization
-//====================================================
 
 void UIManager::begin()
 {
     pinMode(BUTTON_UP_PIN, INPUT_PULLUP);
-
     pinMode(BUTTON_DOWN_PIN, INPUT_PULLUP);
-
     pinMode(START_SWITCH_PIN, INPUT_PULLUP);
 }
-
-
-//====================================================
-// Update
-//====================================================
 
 void UIManager::update()
 {
@@ -28,37 +16,36 @@ void UIManager::update()
     bool currentStart = digitalRead(START_SWITCH_PIN);
 
     upState = (lastUp == HIGH && currentUp == LOW);
-
     downState = (lastDown == HIGH && currentDown == LOW);
 
+    upHoldState = (currentUp == LOW);
+    downHoldState = (currentDown == LOW);
     startState = (currentStart == LOW);
 
-    //------------------------------------------------
-    // DOWN long-press tracking
-    //------------------------------------------------
-
-    if (currentDown == LOW)
+    // UP + DOWN held together = mode change.
+    if (currentUp == LOW && currentDown == LOW)
     {
-        // Just pressed -> start the hold timer
-        if (lastDown == HIGH)
+        if (lastUp == HIGH || lastDown == HIGH)
         {
-            downHoldStart = millis();
-            downLongConsumed = false;
+            modeHoldStart = millis();
+            modeLongConsumed = false;
         }
 
-        if (!downLongConsumed && (millis() - downHoldStart >= BUTTON_LONG_PRESS_MS))
+        if (!modeLongConsumed &&
+            (millis() - modeHoldStart >= BUTTON_LONG_PRESS_MS))
         {
-            downLongState = true;
-            downLongConsumed = true; // fire once per hold
+            modeLongState = true;
+            modeLongConsumed = true;
         }
         else
         {
-            downLongState = false;
+            modeLongState = false;
         }
     }
     else
     {
-        downLongState = false;
+        modeLongState = false;
+        modeLongConsumed = false;
     }
 
     lastUp = currentUp;
@@ -66,38 +53,32 @@ void UIManager::update()
     lastStart = currentStart;
 }
 
-//====================================================
-// UP Button
-//====================================================
-
 bool UIManager::upPressed()
 {
     return upState;
 }
-
-//====================================================
-// DOWN Button
-//====================================================
 
 bool UIManager::downPressed()
 {
     return downState;
 }
 
-//====================================================
-// START Switch
-//====================================================
-
-bool UIManager::startPressed()
+bool UIManager::startOn() const
 {
     return startState;
 }
 
-//====================================================
-// DOWN Long Press
-//====================================================
-
-bool UIManager::downLongPressed()
+bool UIManager::upHeld() const
 {
-    return downLongState;
+    return upHoldState;
+}
+
+bool UIManager::downHeld() const
+{
+    return downHoldState;
+}
+
+bool UIManager::modeLongPressed()
+{
+    return modeLongState;
 }
