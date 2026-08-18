@@ -11,18 +11,16 @@ DisplayManager display;
 #define OUTER_Y 6
 #define OUTER_W 468
 #define OUTER_H 308
-
-// Compact header: logo at top-left, title beside it.
 #define HEADER_LINE_Y 43
+
 #define LOGO_PATH "/logo.png"
 #define LOGO_X 16
 #define LOGO_Y 10
-#define LOGO_BOX_W 105
-#define LOGO_BOX_H 25
-#define LOGO_SAMPLE 3
+#define LOGO_BOX_W 92
+#define LOGO_BOX_H 24
+#define LOGO_SAMPLE 4
 #define LOGO_SOURCE_MAX 600
 
-// Four separate display fields, moved upward and given the available height.
 #define GRID_X 14
 #define GRID_Y 51
 #define GRID_W 452
@@ -37,92 +35,70 @@ DisplayManager display;
 
 namespace
 {
-    PNG logoPng;
-    File logoFile;
-    TFT_eSPI *logoTft = nullptr;
+PNG logoPng;
+File logoFile;
+TFT_eSPI *logoTft = nullptr;
 
-    void *logoOpen(const char *filename, int32_t *size)
+void *logoOpen(const char *filename, int32_t *size)
+{
+    logoFile = LittleFS.open(filename, "r");
+    if (!logoFile)
     {
-        logoFile = LittleFS.open(filename, "r");
-        if (!logoFile)
-        {
-            *size = 0;
-            return nullptr;
-        }
-        *size = static_cast<int32_t>(logoFile.size());
-        return &logoFile;
+        *size = 0;
+        return nullptr;
     }
+    *size = static_cast<int32_t>(logoFile.size());
+    return &logoFile;
+}
 
-    void logoClose(void *handle)
-    {
-        (void)handle;
-        if (logoFile)
-            logoFile.close();
-    }
+void logoClose(void *handle)
+{
+    (void)handle;
+    if (logoFile)
+        logoFile.close();
+}
 
-    int32_t logoRead(PNGFILE *file, uint8_t *buffer, int32_t length)
-    {
-        (void)file;
-        if (!logoFile)
-            return 0;
-        return static_cast<int32_t>(logoFile.read(buffer, length));
-    }
+int32_t logoRead(PNGFILE *file, uint8_t *buffer, int32_t length)
+{
+    (void)file;
+    return logoFile ? static_cast<int32_t>(logoFile.read(buffer, length)) : 0;
+}
 
-    int32_t logoSeek(PNGFILE *file, int32_t position)
-    {
-        (void)file;
-        if (!logoFile)
-            return 0;
-        return logoFile.seek(position) ? 1 : 0;
-    }
+int32_t logoSeek(PNGFILE *file, int32_t position)
+{
+    (void)file;
+    return logoFile && logoFile.seek(position) ? 1 : 0;
+}
 
-    int logoDraw(PNGDRAW *pDraw)
-    {
-        if (!logoTft)
-            return 0;
+int logoDraw(PNGDRAW *pDraw)
+{
+    if (!logoTft || pDraw->iWidth <= 0)
+        return 0;
 
-        // Down-sample the source image so a large PNG cannot overflow the
-        // header and remains compact at the top-left of the display.
-        if ((pDraw->y % LOGO_SAMPLE) != 0)
-            return 1;
-
-        static uint16_t sourceLine[LOGO_SOURCE_MAX];
-        static uint16_t outputLine[LOGO_SOURCE_MAX / LOGO_SAMPLE + 2];
-
-        int16_t sourceWidth = pDraw->iWidth;
-        if (sourceWidth <= 0)
-            return 1;
-        if (sourceWidth > LOGO_SOURCE_MAX)
-            sourceWidth = LOGO_SOURCE_MAX;
-
-        logoPng.getLineAsRGB565(
-            pDraw,
-            sourceLine,
-            PNG_RGB565_BIG_ENDIAN,
-            TFT_BLACK);
-
-        int16_t outputWidth = 0;
-        for (int16_t sx = 0; sx < sourceWidth; sx += LOGO_SAMPLE)
-        {
-            if (outputWidth >= (LOGO_SOURCE_MAX / LOGO_SAMPLE + 2))
-                break;
-            outputLine[outputWidth++] = sourceLine[sx];
-        }
-
-        if (outputWidth <= 0)
-            return 1;
-
-        int16_t outputY = LOGO_Y + (pDraw->y / LOGO_SAMPLE);
-        if (outputY >= LOGO_Y + LOGO_BOX_H)
-            return 1;
-
-        int16_t outputX = LOGO_X;
-        if (outputWidth > LOGO_BOX_W)
-            outputWidth = LOGO_BOX_W;
-
-        logoTft->pushImage(outputX, outputY, outputWidth, 1, outputLine);
+    // Down-sample the PNG so it fits the compact header.
+    if ((pDraw->y % LOGO_SAMPLE) != 0)
         return 1;
-    }
+
+    static uint16_t sourceLine[LOGO_SOURCE_MAX];
+    static uint16_t outputLine[LOGO_SOURCE_MAX / LOGO_SAMPLE + 2];
+
+    int16_t sourceWidth = pDraw->iWidth;
+    if (sourceWidth > LOGO_SOURCE_MAX)
+        sourceWidth = LOGO_SOURCE_MAX;
+
+    logoPng.getLineAsRGB565(pDraw, sourceLine, PNG_RGB565_BIG_ENDIAN, TFT_BLACK);
+
+    int16_t outputWidth = 0;
+    for (int16_t sx = 0; sx < sourceWidth && outputWidth < LOGO_BOX_W; sx += LOGO_SAMPLE)
+        outputLine[outputWidth++] = sourceLine[sx];
+
+    int16_t outputY = LOGO_Y + (pDraw->y / LOGO_SAMPLE);
+    if (outputY < LOGO_Y || outputY >= LOGO_Y + LOGO_BOX_H || outputWidth <= 0)
+        return 1;
+
+    logoTft->pushImage(LOGO_X, outputY, outputWidth, 1, outputLine);
+    return 1;
+}
 }
 
 void DisplayManager::begin()
@@ -142,7 +118,6 @@ void DisplayManager::update()
 {
     if (millis() - lastRefresh < DISPLAY_REFRESH_MS)
         return;
-
     lastRefresh = millis();
     if (!layoutDrawn)
         return;
@@ -204,7 +179,6 @@ void DisplayManager::showErrorScreen(const String &msg)
 
 void DisplayManager::drawLogo()
 {
-    // Always reserve and clear only the small logo area.
     tft.fillRect(LOGO_X, LOGO_Y, LOGO_BOX_W, LOGO_BOX_H, TFT_BLACK);
 
     if (!LittleFS.exists(LOGO_PATH))
@@ -214,7 +188,6 @@ void DisplayManager::drawLogo()
     }
 
     logoTft = &tft;
-
     if (logoPng.open(LOGO_PATH, logoOpen, logoClose, logoRead, logoSeek, logoDraw) != PNG_SUCCESS)
     {
         Serial.println("Logo PNG open failed");
@@ -225,7 +198,6 @@ void DisplayManager::drawLogo()
     tft.startWrite();
     logoPng.decode(nullptr, 0);
     tft.endWrite();
-
     logoPng.close();
     logoTft = nullptr;
 }
@@ -235,17 +207,16 @@ void DisplayManager::drawLayout()
     layoutDrawn = true;
     tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(TL_DATUM);
-
     tft.drawRoundRect(OUTER_X, OUTER_Y, OUTER_W, OUTER_H, 5, TFT_WHITE);
 
-    // Compact top header: logo on the left and title beside it.
+    // Compact header: logo locked to the top-left, title beside it.
     drawLogo();
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.drawCentreString("PUSH/PULL TESTER", 305, 24, 3);
+    tft.drawCentreString("PUSH/PULL TESTER", 315, 24, 2);
     tft.drawFastHLine(OUTER_X + 8, HEADER_LINE_Y, OUTER_W - 16, TFT_DARKGREY);
 
-    // Four completely separate fields.
+    // Four separate boxes remain unchanged in structure.
     tft.drawRoundRect(LEFT_X, TOP_Y, CELL_W, CELL_H, 5, TFT_WHITE);
     tft.drawRoundRect(RIGHT_X, TOP_Y, CELL_W, CELL_H, 5, TFT_WHITE);
     tft.drawRoundRect(LEFT_X, BOTTOM_Y, CELL_W, CELL_H, 5, TFT_WHITE);
@@ -264,18 +235,14 @@ void DisplayManager::drawForce()
         return;
     lastForce = currentForce;
 
-    const int16_t x = LEFT_X + 4;
-    const int16_t y = TOP_Y + 34;
-    const int16_t w = CELL_W - 8;
-    const int16_t h = CELL_H - 39;
+    const int16_t x = LEFT_X + 4, y = TOP_Y + 34;
+    const int16_t w = CELL_W - 8, h = CELL_H - 39;
     tft.fillRect(x, y, w, h, TFT_BLACK);
 
     String value = String(currentForce, 3);
     String unit = "kg";
-    const uint8_t valueFont = 6;
-    const uint8_t unitFont = 4;
+    const uint8_t valueFont = 6, unitFont = 4;
     const int16_t gap = 5;
-
     int16_t valueW = tft.textWidth(value, valueFont);
     int16_t unitW = tft.textWidth(unit, unitFont);
     int16_t totalW = valueW + gap + unitW;
@@ -291,16 +258,9 @@ void DisplayManager::drawForce()
 
 void DisplayManager::drawMode()
 {
-    if (mode == lastMode)
-        return;
+    if (mode == lastMode) return;
     lastMode = mode;
-
-    const int16_t x = RIGHT_X + 4;
-    const int16_t y = TOP_Y + 34;
-    const int16_t w = CELL_W - 8;
-    const int16_t h = CELL_H - 39;
-    tft.fillRect(x, y, w, h, TFT_BLACK);
-
+    tft.fillRect(RIGHT_X + 4, TOP_Y + 34, CELL_W - 8, CELL_H - 39, TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(mode == "TENSILE" ? TFT_GREEN : TFT_ORANGE, TFT_BLACK);
     tft.drawCentreString(mode, RIGHT_X + CELL_W / 2, TOP_Y + CELL_H / 2 + 4, 4);
@@ -308,34 +268,14 @@ void DisplayManager::drawMode()
 
 void DisplayManager::drawMotor()
 {
-    if (motorStatus == lastMotor)
-        return;
+    if (motorStatus == lastMotor) return;
     lastMotor = motorStatus;
-
-    const int16_t x = LEFT_X + 4;
-    const int16_t y = BOTTOM_Y + 34;
-    const int16_t w = CELL_W - 8;
-    const int16_t h = CELL_H - 39;
-    tft.fillRect(x, y, w, h, TFT_BLACK);
+    tft.fillRect(LEFT_X + 4, BOTTOM_Y + 34, CELL_W - 8, CELL_H - 39, TFT_BLACK);
 
     String displayMotor = motorStatus;
     uint16_t color = TFT_YELLOW;
-
-    if (motorStatus == "UP")
-    {
-        displayMotor = "DOWN";
-        color = TFT_RED;
-    }
-    else if (motorStatus == "DOWN")
-    {
-        displayMotor = "UP";
-        color = TFT_GREEN;
-    }
-    else
-    {
-        displayMotor = "STOP";
-        color = TFT_YELLOW;
-    }
+    if (motorStatus == "UP") { displayMotor = "DOWN"; color = TFT_RED; }
+    else if (motorStatus == "DOWN") { displayMotor = "UP"; color = TFT_GREEN; }
 
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(color, TFT_BLACK);
@@ -344,15 +284,9 @@ void DisplayManager::drawMotor()
 
 void DisplayManager::drawStatus()
 {
-    if (machineStatus == lastStatus)
-        return;
+    if (machineStatus == lastStatus) return;
     lastStatus = machineStatus;
-
-    const int16_t x = RIGHT_X + 4;
-    const int16_t y = BOTTOM_Y + 34;
-    const int16_t w = CELL_W - 8;
-    const int16_t h = CELL_H - 39;
-    tft.fillRect(x, y, w, h, TFT_BLACK);
+    tft.fillRect(RIGHT_X + 4, BOTTOM_Y + 34, CELL_W - 8, CELL_H - 39, TFT_BLACK);
 
     uint16_t color = TFT_WHITE;
     if (machineStatus == "READY") color = TFT_GREEN;
@@ -372,17 +306,6 @@ void DisplayManager::setCurrentForce(float value)
     currentForce = value;
 }
 
-void DisplayManager::setMode(const String &newMode)
-{
-    mode = newMode;
-}
-
-void DisplayManager::setMotorStatus(const String &status)
-{
-    motorStatus = status;
-}
-
-void DisplayManager::setMachineStatus(const String &status)
-{
-    machineStatus = status;
-}
+void DisplayManager::setMode(const String &newMode) { mode = newMode; }
+void DisplayManager::setMotorStatus(const String &status) { motorStatus = status; }
+void DisplayManager::setMachineStatus(const String &status) { machineStatus = status; }
