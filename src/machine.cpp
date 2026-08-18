@@ -9,6 +9,7 @@ void MachineController::begin()
     mode = MachineMode::TENSILE;
     state = MachineState::READY;
     modeChangeLock = false;
+    manualContinuousActive = false;
 
     display.setCurrentForce(currentForce);
     display.setMode("TENSILE");
@@ -24,8 +25,6 @@ void MachineController::update()
         if (state == MachineState::RUNNING)
             stopTestMotion();
 
-        // Turning the switch OFF after a mode change releases the lock
-        // and resets the test value for the next manual positioning cycle.
         if (modeChangeLock)
         {
             modeChangeLock = false;
@@ -41,9 +40,8 @@ void MachineController::update()
         return;
     }
 
-    // While the switch is ON, holding either button during switch-on
-    // selects the next mode. The motor must remain stopped until the
-    // user turns the switch OFF again.
+    // Hold either button while turning the toggle ON to change mode.
+    // The motor remains stopped until the switch is turned OFF again.
     if (ui.modeChangeRequested())
     {
         motor.stop();
@@ -72,49 +70,51 @@ void MachineController::update()
 
 void MachineController::updateManualControl()
 {
-    // Any manual button after STOP starts a fresh test cycle.
     if (ui.upPressed() || ui.downPressed() || ui.upLongHeld() || ui.downLongHeld())
     {
+        // A button interaction after STOP starts a fresh test cycle.
         if (state == MachineState::STOP)
-            resetCurrentForce();
-
-        if (state != MachineState::READY && currentForce != INITIAL_CURRENT_FORCE)
             resetCurrentForce();
 
         state = MachineState::READY;
     }
 
-    // A short press commands one complete fixed step. Do not stop it on
-    // the following loop; AccelStepper must be allowed to finish the move.
+    // Short press = one complete fixed step.
+    // The move is allowed to finish by motor.update() even after release.
     if (ui.upPressed())
     {
+        manualContinuousActive = false;
         motor.manualStep(+1);
         return;
     }
 
     if (ui.downPressed())
     {
+        manualContinuousActive = false;
         motor.manualStep(-1);
         return;
     }
 
-    // Long hold begins continuous movement after the short-press window.
+    // Long hold = continuous movement until release.
     if (ui.upLongHeld())
     {
+        manualContinuousActive = true;
         motor.manualHold(+1);
         return;
     }
 
     if (ui.downLongHeld())
     {
+        manualContinuousActive = true;
         motor.manualHold(-1);
         return;
     }
 
-    // Release stops continuous manual movement. A completed short step
-    // is allowed to finish in motor.update().
-    if (!ui.upHeld() && !ui.downHeld())
+    // Only stop here when a continuous manual movement was active.
+    // A short step must not be cancelled by the next loop iteration.
+    if (manualContinuousActive && !ui.upHeld() && !ui.downHeld())
     {
+        manualContinuousActive = false;
         motor.stop();
     }
 }
