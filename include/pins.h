@@ -21,10 +21,10 @@ constexpr uint8_t BUZZER_PIN = 14;
 //====================================================
 
 // Push Button (+100g)
-constexpr uint8_t BUTTON_UP_PIN = 21; // 34;
+constexpr uint8_t BUTTON_UP_PIN = 22; // 34;
 
 // Push Button (-100g)
-constexpr uint8_t BUTTON_DOWN_PIN = 22; // 35;
+constexpr uint8_t BUTTON_DOWN_PIN = 21; // 35;
 
 // Start / Stop Toggle Switch
 constexpr uint8_t START_SWITCH_PIN = 13;
