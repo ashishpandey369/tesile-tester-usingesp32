@@ -1,36 +1,26 @@
-# GoldTester
-## Precision Gold Chain Tensile Testing Machine
+# ESP32 Tensile Tester
 
-Version : 1.0
+**Project for Design Roots Company**
 
-Author1 : Ashish Pandey
-Author2: Vaishnavi NP 
-Platform :
-- ESP32 DevKit V1
-- PlatformIO
-- C++
-- OOP
+Version: 2.0.0
+Platform: ESP32 DevKit V1 / PlatformIO / C++
 
----
+## Project Objective
 
-# Project Objective
+Build a motor-controlled machine that can perform two motion-based test modes:
 
-Develop a professional precision tensile testing machine capable of measuring the tensile force applied to gold chains using a Load Cell and controlling the pulling force through a NEMA17 stepper motor.
+- **TENSILE / PULL:** automatic forward movement.
+- **PUSH:** automatic backward movement.
 
-The machine shall:
+The machine also provides manual motor positioning through UP and DOWN buttons and a 480×320 ILI9488 display.
 
-• Measure applied force continuously.
-• Display live force on TFT.
-• Allow target force selection.
-• Automatically stop at target force.
-• Prevent overshoot.
-• Protect expensive jewellery.
-• Store calibration.
-• Provide smooth industrial operation.
+## Major Architecture Change — v2.0.0
 
----
+The physical load cell and HX711 have been removed completely from the active machine.
 
-# Machine Workflow
+The displayed `Current Force` value is now a software test-point value derived from motor steps during automatic toggle-controlled operation. It is not a physical force measurement.
+
+## Operating Workflow
 
 Power ON
 
@@ -44,229 +34,15 @@ Display Boot Screen
 
 ↓
 
-Initialize HX711
+READY / Current Force = 00.000
 
 ↓
 
-Initialize Stepper Driver
+Manual positioning with UP / DOWN
 
 ↓
 
-Initialize Safety System
-
-↓
-
-Ready Screen
-
-↓
-
-User Selects Target Force
-
-↓
-
-START
-
-↓
-
-Motor Pulls Chain
-
-↓
-
-Read Force
-
-↓
-
-Compare with Target
-
-↓
-
-Adjust Motor Speed
-
-↓
-
-Target Reached
-
-↓
-
-Stop Motor
-
-↓
-
-Buzzer
-
-↓
-
-Display Result
-
-↓
-
-Return Home
-
-↓
-
-Ready
-
----
-
-# Hardware
-
-Controller
-
-ESP32 DevKit V1
-
-Display
-
-3.5 Inch SPI TFT
-ILI9488
-480x320
-
-Load Cell
-
-20kg
-
-ADC
-
-HX711
-
-Motor
-
-NEMA17
-
-Driver
-
-HW-134A
-
-Buzzer
-
-5V Active Buzzer
-
-Power
-
-24V Supply
-
----
-
-# Final Pin Mapping
-
-## HX711
-
-DT
-GPIO4
-
-SCK
-GPIO5
-
----
-
-## Buzzer
-
-GPIO14
-
----
-
-## HW-134A
-
-STEP
-GPIO25
-
-DIR
-GPIO17
-
-ENABLE
-GPIO16
-
-RST
-3.3V
-
-SLP
-3.3V
-
-MS1
-GND
-
-MS2
-GND
-
-MS3
-GND
-
-VMOT
-24V
-
-100uF Capacitor across VMOT
-
----
-
-## TFT
-
-SCK
-GPIO18
-
-MOSI
-GPIO23
-
-MISO
-GPIO19
-
-CS
-GPIO27
-
-DC
-GPIO32
-
-RST
-GPIO33
-
-LED
-5V
-
----
-
-# Software Architecture
-
-main.cpp
-
-↓
-
-MachineController
-
-↓
-
-DisplayManager
-
-↓
-
-LoadCellManager
-
-↓
-
-MotorController
-
-↓
-
-SafetyManager
-
-↓
-
-BuzzerManager
-
----
-
-# Machine States
-
-BOOT
-
-↓
-
-INITIALIZING
-
-↓
-
-READY
-
-↓
-
-PRELOAD
+Toggle ON
 
 ↓
 
@@ -274,432 +50,124 @@ RUNNING
 
 ↓
 
-TARGET_REACHED
+Automatic motion according to selected mode
 
 ↓
 
-RETURN_HOME
+Current Force software value increases
 
 ↓
 
-COMPLETED
+Toggle OFF
 
 ↓
 
-ERROR
-
----
-
-# Display Layout
-
-Gold Tester
-
-Current Force
-
-0.000 kg
-
-Target Force
-
-5.000 kg
-
-Motor
-
-Forward
-
-Status
-
-Ready
-
-Progress
-
-██████████
-
----
-
-# Force Control Logic
-
-Read Load Cell
+STOP / Motor disabled
 
 ↓
 
-Average Filter
+Next UP or DOWN interaction resets Current Force to 00.000
 
 ↓
 
-Convert to kg
+Manual positioning again
 
-↓
+## Controls
 
-Compare Target
+### UP
 
-↓
+- Short press: one fixed motor step upward.
+- Long press: continuous upward movement until release.
+- Manual movement does not change Current Force.
 
-Calculate Error
+### DOWN
 
-↓
+- Short press: one fixed motor step downward.
+- Long press: continuous downward movement until release.
+- Manual movement does not change Current Force.
 
-Motor Speed Adjustment
+### Mode Change
 
-↓
+Hold **UP + DOWN together** for the configured long-press duration while the master toggle is OFF.
 
-Near Target
+The mode alternates:
 
-↓
+`TENSILE ↔ PUSH`
 
-Reduce Speed
+### START/STOP Toggle
 
-↓
+The toggle is the master machine control.
 
-Micro Movement
+- ON → automatic motor motion starts according to the selected mode.
+- OFF → motor stops immediately and the machine shows `STOP`.
 
-↓
+## Machine Status
 
-Target Reached
+- `READY` — first powered state.
+- `RUNNING` — automatic toggle-controlled motion active.
+- `STOP` — toggle OFF after operation.
 
-↓
+## Hardware
 
-Stop
+| Component | Function |
+|---|---|
+| ESP32 DevKit V1 | Main controller |
+| ILI9488 480×320 TFT | User interface |
+| HW-134A | Stepper driver |
+| NEMA17 / compatible actuator | Mechanical movement |
+| Buzzer | Machine feedback |
+| UP button | Manual UP |
+| DOWN button | Manual DOWN |
+| Toggle switch | Master ON/OFF |
 
----
+## Pin Mapping
 
-# Motor Behaviour
+| Function | GPIO |
+|---|---:|
+| UP | 21 |
+| DOWN | 22 |
+| START/STOP | 13 |
+| Buzzer | 14 |
+| STEP | 25 |
+| DIR | 17 |
+| ENABLE | 16 |
+| TFT SCLK | 18 |
+| TFT MOSI | 23 |
+| TFT MISO | 19 |
+| TFT CS | 27 |
+| TFT DC | 32 |
+| TFT RST | 33 |
 
-Far From Target
+## Display
 
-Fast
+The display shows:
 
-Medium Distance
+- Current Force software value
+- Current mode
+- Motor direction/state
+- Machine status
+- Manual-control guidance
 
-Medium Speed
+Display rotation is configured through `DISPLAY_ROTATION` in `config.h`.
 
-Near Target
+## Safety
 
-Slow
+The master toggle is treated as the software emergency-stop input: OFF stops and disables the motor. A physical emergency-stop circuit is still recommended for the final machine.
 
-Very Near Target
+## Folder Structure
 
-Creep Mode
-
-Target
-
-Stop
-
----
-
-# Load Cell
-
-Sampling
-
-80 SPS
-
-Filtering
-
-Moving Average
-
-Calibration
-
-Known Weight Method
-
-Offset
-
-Automatic Zero
-
-Storage
-
-EEPROM
-
----
-
-# Safety Features
-
-Maximum Force Protection
-
-Emergency Stop
-
-Motor Timeout
-
-HX711 Failure Detection
-
-Display Failure Detection
-
-Power Loss Recovery
-
-Watchdog
-
----
-
-# User Interface
-
-Boot Screen
-
-Ready Screen
-
-Running Screen
-
-Completed Screen
-
-Calibration Screen
-
-Settings Screen
-
-Error Screen
-
----
-
-# Logging
-
-Display
-
-Current Force
-
-Target
-
-Motor Direction
-
-Motor Speed
-
-Machine State
-
-Serial Monitor
-
-Debug Information
-
-Calibration Values
-
-Errors
-
-Warnings
-
----
-
-# Calibration
-
-Zero Calibration
-
-Span Calibration
-
-Known Weight Calibration
-
-EEPROM Save
-
-EEPROM Restore
-
-Verification
-
----
-
-# Testing Procedure
-
-Display Test
-
-HX711 Test
-
-Motor Test
-
-Calibration Test
-
-Target Force Test
-
-Emergency Stop Test
-
-Long Duration Test
-
-Repeatability Test
-
----
-
-# Future Improvements
-
-Touch UI
-
-Bluetooth
-
-WiFi
-
-OTA
-
-SD Card Logging
-
-USB Export
-
-Graph Plotting
-
-CSV Export
-
-Automatic Reports
-
-Cloud Synchronization
-
-Mobile Application
-
-Battery Backup
-
-Printer Support
-
-QR Code Reports
-
----
-
-# Development Roadmap
-
-Phase 1
-
-Hardware Testing
-
-Phase 2
-
-Display
-
-Phase 3
-
-Load Cell
-
-Phase 4
-
-Motor
-
-Phase 5
-
-Machine Controller
-
-Phase 6
-
-Force Control
-
-Phase 7
-
-Calibration
-
-Phase 8
-
-Safety
-
-Phase 9
-
-User Interface
-
-Phase 10
-
-PCB Design
-
-Phase 11
-
-Enclosure
-
-Phase 12
-
-Production Firmware
-
----
-
-# Coding Rules
-
-Object Oriented Programming
-
-Single Responsibility Principle
-
-No Global Variables
-
-Reusable Modules
-
-Readable Code
-
-Meaningful Naming
-
-Separate Hardware Layer
-
-Separate Logic Layer
-
-Separate UI Layer
-
----
-
-# Folder Structure
-
-Stress
-
-include
-
-src
-
-docs
-
+```text
+include/
+src/
+docs/
+lib/
+test/
 platformio.ini
-
 README.md
+```
 
----
+## Status
 
-# Documentation Files
+**v2.0.0 — Motion-Controlled Tester**
 
-README
-
-Project Overview
-
-Hardware Architecture
-
-Software Architecture
-
-Wiring Guide
-
-Force Control Algorithm
-
-Display UI
-
-Calibration
-
-Testing
-
-Safety
-
-Future Improvements
-
-Roadmap
-
-Engineering Logbook
-
-TODO
-
-Changelog
-
----
-
-# TODO
-
-Display
-
-HX711
-
-Calibration
-
-Motor
-
-Acceleration
-
-Target Force
-
-Display UI
-
-EEPROM
-
-Settings
-
-Safety
-
-PCB
-
-Testing
-
-Documentation
-
-Production Firmware
-
----
-
-# Version
-
-v1.0
-
-Status
-
-Development Started
+Ready for ESP32 hardware testing of manual jog, mode selection, automatic motion and toggle-stop behavior.
