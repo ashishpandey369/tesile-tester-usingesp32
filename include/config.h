@@ -8,7 +8,7 @@
 //====================================================
 
 #define PROJECT_NAME "GoldTester"
-#define PROJECT_VERSION "2.7.0"
+#define PROJECT_VERSION "2.9.8"
 
 //====================================================
 // Display Configuration
