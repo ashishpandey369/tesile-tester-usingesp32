@@ -17,19 +17,17 @@ void MotorController::update()
 {
     if (speedMode)
     {
-        // Continuous motion uses the same runSpeed path for manual hold
-        // and automatic toggle-controlled movement.
         stepper.runSpeed();
         return;
     }
 
     stepper.run();
 
-    // A manual fixed-step move must finish even after the button is released.
     if (running && stepper.distanceToGo() == 0)
     {
         digitalWrite(ENABLE_PIN, MOTOR_DISABLE);
         running = false;
+        direction = 0;
     }
 }
 
@@ -43,43 +41,47 @@ void MotorController::disable()
     digitalWrite(ENABLE_PIN, MOTOR_DISABLE);
     running = false;
     speedMode = false;
+    direction = 0;
 }
 
-void MotorController::runContinuous(int direction, float speed)
+void MotorController::runContinuous(int requestedDirection, float speed)
 {
-    if (direction == 0)
+    if (requestedDirection == 0)
         return;
 
     enable();
     speedMode = true;
     running = true;
+    direction = requestedDirection > 0 ? +1 : -1;
 
     float signedSpeed = fabsf(speed) * (direction > 0 ? 1.0f : -1.0f);
     stepper.setSpeed(signedSpeed);
 }
 
-void MotorController::manualStep(int direction)
+void MotorController::manualStep(int requestedDirection)
 {
-    if (direction == 0)
+    if (requestedDirection == 0)
         return;
 
     enable();
     speedMode = false;
     running = true;
+    direction = requestedDirection > 0 ? +1 : -1;
 
     stepper.setMaxSpeed(MOTOR_NORMAL_SPEED);
     stepper.setAcceleration(MOTOR_ACCELERATION);
     stepper.move(direction > 0 ? MANUAL_STEP_STEPS : -MANUAL_STEP_STEPS);
 }
 
-void MotorController::manualHold(int direction)
+void MotorController::manualHold(int requestedDirection)
 {
-    if (direction == 0)
+    if (requestedDirection == 0)
         return;
 
     enable();
     speedMode = true;
     running = true;
+    direction = requestedDirection > 0 ? +1 : -1;
 
     float signedSpeed = MANUAL_HOLD_SPEED * (direction > 0 ? 1.0f : -1.0f);
     stepper.setSpeed(signedSpeed);
@@ -99,6 +101,13 @@ bool MotorController::isRunning() const
 
 long MotorController::getCurrentPosition() const
 {
-    // AccelStepper::currentPosition() is not const-qualified.
     return const_cast<AccelStepper &>(stepper).currentPosition();
+}
+
+int MotorController::getDirection() const
+{
+    if (!running)
+        return 0;
+
+    return direction;
 }
