@@ -8,7 +8,7 @@
 //====================================================
 
 #define PROJECT_NAME "GoldTester"
-#define PROJECT_VERSION "2.4.0"
+#define PROJECT_VERSION "2.5.0"
 
 //====================================================
 // Display Configuration
@@ -52,7 +52,8 @@ constexpr uint16_t BUTTON_LONG_PRESS_MS = 1000;
 constexpr uint16_t BUTTON_DEBOUNCE_MS = 30;
 constexpr uint16_t MODE_CHANGE_WINDOW_MS = 600;
 
-// Press one button, then the opposite button within the window to change mode.
+// Press UP then turn the toggle ON to select TENSILE.
+// Press DOWN then turn the toggle ON to select PUSH.
 
 //====================================================
 // Machine Timing
