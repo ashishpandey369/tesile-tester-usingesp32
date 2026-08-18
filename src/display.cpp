@@ -7,14 +7,23 @@ DisplayManager display;
 #define CONTENT_R 460
 #define CONTENT_W (CONTENT_R - CONTENT_L)
 
+//====================================================
+// Initialization
+//====================================================
+
 void DisplayManager::begin()
 {
     tft.init();
     tft.setRotation(DISPLAY_ROTATION);
     tft.fillScreen(TFT_BLACK);
     tft.setTextWrap(false);
+
     showBootScreen();
 }
+
+//====================================================
+// Display Update
+//====================================================
 
 void DisplayManager::update()
 {
@@ -32,35 +41,52 @@ void DisplayManager::update()
     drawStatus();
 }
 
+//====================================================
+// Clear Screen
+//====================================================
+
 void DisplayManager::clear()
 {
     tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(TL_DATUM);
+
     tft.drawRect(6, 6, 468, 308, BORDER_COLOR);
 
     layoutDrawn = false;
+
     lastForce = -9999.0f;
     lastMode = "";
     lastMotor = "";
     lastStatus = "";
 }
 
+//====================================================
+// Boot Screen
+//====================================================
+
 void DisplayManager::showBootScreen()
 {
     clear();
 
     tft.setTextDatum(MC_DATUM);
+
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.drawCentreString("GOLD TESTER", 240, 90, 4);
+    tft.drawCentreString("GOLD TESTER", 240, 88, 4);
 
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawCentreString("ESP32 TENSILE TESTER", 240, 135, 2);
-    tft.drawCentreString("Initializing...", 240, 180, 2);
+    tft.drawCentreString("ESP32 TENSILE TESTER", 240, 132, 2);
+
+    tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    tft.drawCentreString("Initializing...", 240, 176, 2);
 
     delay(BOOT_SCREEN_TIME);
 
     showHomeScreen();
 }
+
+//====================================================
+// Home Screen
+//====================================================
 
 void DisplayManager::showHomeScreen()
 {
@@ -78,19 +104,30 @@ void DisplayManager::showHomeScreen()
     drawStatus();
 }
 
+//====================================================
+// Error Screen
+//====================================================
+
 void DisplayManager::showErrorScreen(const String &msg)
 {
     clear();
 
     tft.setTextDatum(MC_DATUM);
+
     tft.setTextColor(TFT_RED, TFT_BLACK);
-    tft.drawCentreString("SYSTEM STOP", 240, 70, 4);
+    tft.drawCentreString("SYSTEM STOP", 240, 72, 4);
 
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawCentreString(msg, 240, 135, 2);
-    tft.drawCentreString("Turn switch OFF", 240, 200, 2);
-    tft.drawCentreString("and restart", 240, 230, 2);
+    tft.drawCentreString(msg, 240, 132, 2);
+
+    tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+    tft.drawCentreString("TURN SWITCH OFF", 240, 195, 2);
+    tft.drawCentreString("THEN RESTART", 240, 222, 2);
 }
+
+//====================================================
+// Main Layout
+//====================================================
 
 void DisplayManager::drawLayout()
 {
@@ -98,28 +135,46 @@ void DisplayManager::drawLayout()
 
     tft.setTextDatum(TL_DATUM);
     tft.fillScreen(TFT_BLACK);
+
+    // Outer frame
     tft.drawRect(6, 6, 468, 308, BORDER_COLOR);
 
+    // Header
+    tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.drawCentreString("GOLD TESTER", 240, 18, 4);
-
-    tft.drawFastHLine(CONTENT_L, 48, CONTENT_W, TFT_DARKGREY);
-
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawString("CURRENT FORCE", CONTENT_L, 65, 2);
-    tft.drawString("MODE", 250, 65, 2);
-
-    tft.drawFastHLine(CONTENT_L, 155, CONTENT_W, TFT_DARKGREY);
-
-    tft.drawString("MOTOR", CONTENT_L, 175, 2);
-    tft.drawString("MACHINE STATUS", 250, 175, 2);
-
-    tft.drawFastHLine(CONTENT_L, 245, CONTENT_W, TFT_DARKGREY);
+    tft.drawCentreString("GOLD TESTER", 240, 20, 4);
 
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    tft.drawCentreString("PRESS UP/DOWN: MANUAL STEP", 240, 260, 2);
-    tft.drawCentreString("HOLD: CONTINUOUS | SWITCH ON: TEST", 240, 285, 2);
+    tft.drawCentreString("ESP32 TENSILE TESTER", 240, 42, 1);
+
+    tft.drawFastHLine(CONTENT_L, 56, CONTENT_W, TFT_DARKGREY);
+
+    // Force / mode section
+    tft.setTextDatum(TL_DATUM);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.drawString("CURRENT FORCE", CONTENT_L, 68, 2);
+    tft.drawString("MODE", 270, 68, 2);
+
+    tft.drawFastHLine(CONTENT_L, 150, CONTENT_W, TFT_DARKGREY);
+
+    // Motor / machine status section
+    tft.drawString("MOTOR", CONTENT_L, 163, 2);
+    tft.drawString("MACHINE STATUS", 270, 163, 2);
+
+    tft.drawFastHLine(CONTENT_L, 232, CONTENT_W, TFT_DARKGREY);
+
+    // Footer instructions
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    tft.drawCentreString("UP / DOWN  =  MANUAL MOVEMENT", 240, 246, 1);
+    tft.drawCentreString("HOLD 1 SEC  =  CONTINUOUS MOVEMENT", 240, 263, 1);
+    tft.drawCentreString("SWITCH ON  =  START TEST", 240, 280, 1);
+    tft.drawCentreString("RESET / MODE  =  RESET OR SELECT MODE", 240, 297, 1);
 }
+
+//====================================================
+// Current Force
+//====================================================
 
 void DisplayManager::drawForce()
 {
@@ -128,10 +183,17 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    tft.fillRect(CONTENT_L, 90, 210, 55, TFT_BLACK);
+    tft.setTextDatum(TL_DATUM);
+
+    tft.fillRect(CONTENT_L, 88, 230, 55, TFT_BLACK);
+
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
-    tft.drawString(String(currentForce, 3) + " kg", CONTENT_L, 94, 6);
+    tft.drawString(String(currentForce, 3) + " kg", CONTENT_L, 91, 5);
 }
+
+//====================================================
+// Mode
+//====================================================
 
 void DisplayManager::drawMode()
 {
@@ -140,10 +202,21 @@ void DisplayManager::drawMode()
 
     lastMode = mode;
 
-    tft.fillRect(250, 90, 210, 55, TFT_BLACK);
-    tft.setTextColor(mode == "TENSILE" ? TFT_GREEN : TFT_ORANGE, TFT_BLACK);
-    tft.drawString(mode, 250, 105, 4);
+    tft.setTextDatum(TL_DATUM);
+
+    tft.fillRect(270, 88, 185, 55, TFT_BLACK);
+
+    if (mode == "TENSILE")
+        tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    else
+        tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+
+    tft.drawString(mode, 270, 98, 4);
 }
+
+//====================================================
+// Motor Status
+//====================================================
 
 void DisplayManager::drawMotor()
 {
@@ -152,10 +225,17 @@ void DisplayManager::drawMotor()
 
     lastMotor = motorStatus;
 
-    tft.fillRect(CONTENT_L, 200, 210, 35, TFT_BLACK);
+    tft.setTextDatum(TL_DATUM);
+
+    tft.fillRect(CONTENT_L, 185, 230, 35, TFT_BLACK);
+
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.drawString(motorStatus, CONTENT_L, 205, 3);
+    tft.drawString(motorStatus, CONTENT_L, 188, 3);
 }
+
+//====================================================
+// Machine Status
+//====================================================
 
 void DisplayManager::drawStatus()
 {
@@ -164,9 +244,12 @@ void DisplayManager::drawStatus()
 
     lastStatus = machineStatus;
 
-    tft.fillRect(250, 200, 210, 35, TFT_BLACK);
+    tft.setTextDatum(TL_DATUM);
+
+    tft.fillRect(270, 185, 185, 35, TFT_BLACK);
 
     uint16_t color = TFT_WHITE;
+
     if (machineStatus == "READY")
         color = TFT_GREEN;
     else if (machineStatus == "RUNNING")
@@ -177,14 +260,28 @@ void DisplayManager::drawStatus()
         color = TFT_ORANGE;
 
     tft.setTextColor(color, TFT_BLACK);
-    tft.drawString(machineStatus, 250, 205, 3);
+    tft.drawString(machineStatus, 270, 188, 3);
+
+    // Clear the small instruction area before drawing a new prompt.
+    tft.fillRect(150, 220, 300, 12, TFT_BLACK);
 
     if (machineStatus == "TURN OFF")
     {
+        tft.setTextDatum(MC_DATUM);
         tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-        tft.drawCentreString("TURN SWITCH OFF", 240, 230, 2);
+        tft.drawCentreString("TURN SWITCH OFF", 300, 226, 1);
+    }
+    else if (machineStatus == "PRESS BUTTON")
+    {
+        tft.setTextDatum(MC_DATUM);
+        tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+        tft.drawCentreString("PRESS ANY BUTTON TO RESET", 300, 226, 1);
     }
 }
+
+//====================================================
+// Setters
+//====================================================
 
 void DisplayManager::setCurrentForce(float value)
 {
