@@ -117,8 +117,8 @@ void DisplayManager::drawLayout()
     tft.drawFastHLine(CONTENT_L, 245, CONTENT_W, TFT_DARKGREY);
 
     tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    tft.drawCentreString("UP / DOWN: MANUAL POSITION", 240, 260, 2);
-    tft.drawCentreString("HOLD UP + DOWN: CHANGE MODE", 240, 285, 2);
+    tft.drawCentreString("PRESS UP/DOWN: MANUAL STEP", 240, 260, 2);
+    tft.drawCentreString("HOLD: CONTINUOUS | SWITCH ON: TEST", 240, 285, 2);
 }
 
 void DisplayManager::drawForce()
@@ -173,9 +173,17 @@ void DisplayManager::drawStatus()
         color = TFT_CYAN;
     else if (machineStatus == "STOP")
         color = TFT_RED;
+    else if (machineStatus == "TURN OFF")
+        color = TFT_ORANGE;
 
     tft.setTextColor(color, TFT_BLACK);
     tft.drawString(machineStatus, 250, 205, 3);
+
+    if (machineStatus == "TURN OFF")
+    {
+        tft.setTextColor(TFT_ORANGE, TFT_BLACK);
+        tft.drawCentreString("TURN SWITCH OFF", 240, 230, 2);
+    }
 }
 
 void DisplayManager::setCurrentForce(float value)
