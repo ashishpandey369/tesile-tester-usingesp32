@@ -17,6 +17,8 @@ void MotorController::update()
 {
     if (speedMode)
     {
+        // Continuous motion uses the same runSpeed path for manual hold
+        // and automatic toggle-controlled movement.
         stepper.runSpeed();
         return;
     }
@@ -52,7 +54,6 @@ void MotorController::runContinuous(int direction, float speed)
     speedMode = true;
     running = true;
 
-    // Use the same smooth constant-speed path as manual hold.
     float signedSpeed = fabsf(speed) * (direction > 0 ? 1.0f : -1.0f);
     stepper.setSpeed(signedSpeed);
 }
