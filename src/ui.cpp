@@ -20,12 +20,32 @@ void UIManager::update()
     bool currentDown = digitalRead(BUTTON_DOWN_PIN);
     bool currentStart = digitalRead(START_SWITCH_PIN);
 
-    upState = (lastUp == HIGH && currentUp == LOW);
-    downState = (lastDown == HIGH && currentDown == LOW);
+    upState = false;
+    downState = false;
+    manualUpEvent = false;
+    manualDownEvent = false;
+    modeChangeState = false;
+
+    bool newUpPress = (lastUp == HIGH && currentUp == LOW);
+    bool newDownPress = (lastDown == HIGH && currentDown == LOW);
 
     upHoldState = (currentUp == LOW);
     downHoldState = (currentDown == LOW);
     startState = (currentStart == LOW);
+
+    if (newUpPress)
+    {
+        selectionPending = true;
+        selectionWasUp = true;
+        selectionTime = millis();
+    }
+
+    if (newDownPress)
+    {
+        selectionPending = true;
+        selectionWasUp = false;
+        selectionTime = millis();
+    }
 
     if (currentUp == LOW)
     {
@@ -51,42 +71,33 @@ void UIManager::update()
         downLongState = false;
     }
 
-    // Mode selection: press one button, then the opposite button quickly.
-    if (upState && !downState)
+    // If the user holds a button long enough for manual continuous motion,
+    // cancel its pending mode-selection candidate.
+    if (selectionPending && (upLongState || downLongState))
     {
-        if (sequenceWaiting && !firstSequenceWasUp &&
-            (millis() - firstSequenceTime <= MODE_CHANGE_WINDOW_MS))
-        {
-            modeChangeState = true;
-            sequenceWaiting = false;
-        }
-        else
-        {
-            sequenceWaiting = true;
-            firstSequenceWasUp = true;
-            firstSequenceTime = millis();
-        }
-    }
-    else if (downState && !upState)
-    {
-        if (sequenceWaiting && firstSequenceWasUp &&
-            (millis() - firstSequenceTime <= MODE_CHANGE_WINDOW_MS))
-        {
-            modeChangeState = true;
-            sequenceWaiting = false;
-        }
-        else
-        {
-            sequenceWaiting = true;
-            firstSequenceWasUp = false;
-            firstSequenceTime = millis();
-        }
+        selectionPending = false;
     }
 
-    if (sequenceWaiting &&
-        (millis() - firstSequenceTime > MODE_CHANGE_WINDOW_MS))
+    // Press one button, then turn the toggle ON to select that mode.
+    // UP selects TENSILE, DOWN selects PUSH.
+    if (selectionPending && startState)
     {
-        sequenceWaiting = false;
+        modeChangeState = true;
+        modeDirection = selectionWasUp ? -1 : 1;
+        selectionPending = false;
+    }
+
+    // If the toggle remains OFF and the selection window expires,
+    // convert the short press into the normal manual-step event.
+    if (selectionPending &&
+        (millis() - selectionTime > MODE_CHANGE_WINDOW_MS))
+    {
+        if (selectionWasUp)
+            manualUpEvent = true;
+        else
+            manualDownEvent = true;
+
+        selectionPending = false;
     }
 
     previousStartState = startState;
@@ -98,12 +109,16 @@ void UIManager::update()
 
 bool UIManager::upPressed()
 {
-    return upState;
+    bool event = manualUpEvent;
+    manualUpEvent = false;
+    return event;
 }
 
 bool UIManager::downPressed()
 {
-    return downState;
+    bool event = manualDownEvent;
+    manualDownEvent = false;
+    return event;
 }
 
 bool UIManager::startOn() const
@@ -141,4 +156,9 @@ bool UIManager::modeChangeRequested()
     bool requested = modeChangeState;
     modeChangeState = false;
     return requested;
+}
+
+int UIManager::requestedModeDirection() const
+{
+    return modeDirection;
 }
