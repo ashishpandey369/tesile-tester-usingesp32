@@ -135,8 +135,7 @@ void DisplayManager::drawForce()
 
     lastForce = currentForce;
 
-    // Dedicated force panel: 20..260. The complete value is measured
-    // before drawing so neither leading zeroes nor kg can be clipped.
+    // Dedicated force panel. The complete value is centered inside it.
     const int16_t panelX = 20;
     const int16_t panelY = 86;
     const int16_t panelW = 240;
@@ -147,19 +146,20 @@ void DisplayManager::drawForce()
     String value = String(currentForce, 3);
     const int numberSize = 5;
     const int unitSize = 3;
-    const int16_t gap = 7;
+    const int16_t gap = 6;
 
     int16_t numberWidth = tft.textWidth(value, numberSize);
     int16_t unitWidth = tft.textWidth("kg", unitSize);
     int16_t totalWidth = numberWidth + gap + unitWidth;
 
-    // Center the complete "00.000 kg" inside the dedicated force panel.
+    // Center the complete "00.000 kg" string in the left panel.
     int16_t startX = panelX + (panelW - totalWidth) / 2;
 
-    if (startX < panelX + 2)
-        startX = panelX + 2;
+    if (startX < panelX + 4)
+        startX = panelX + 4;
 
     tft.setTextDatum(ML_DATUM);
+
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
     tft.drawString(value, startX, 115, numberSize);
 
@@ -193,35 +193,20 @@ void DisplayManager::drawMotor()
 
     lastMotor = motorStatus;
 
+    // Dedicated motor-status panel. It is updated only when the actual
+    // motor state changes, preventing full-screen flicker.
     tft.fillRect(CONTENT_L, 181, 230, 38, TFT_BLACK);
 
-    String displayMotor = motorStatus;
     uint16_t color = TFT_YELLOW;
 
-    if (motorStatus == "UP" || motorStatus == "FORWARD" || motorStatus == "ANTICLOCKWISE")
-    {
-        displayMotor = "UP";
+    if (motorStatus == "UP")
         color = TFT_GREEN;
-    }
-    else if (motorStatus == "DOWN" || motorStatus == "BACKWARD" || motorStatus == "REVERSE" || motorStatus == "CLOCKWISE")
-    {
-        displayMotor = "DOWN";
+    else if (motorStatus == "DOWN")
         color = TFT_RED;
-    }
-    else if (motorStatus == "RUNNING")
-    {
-        displayMotor = (mode == "TENSILE") ? "UP" : "DOWN";
-        color = (mode == "TENSILE") ? TFT_GREEN : TFT_RED;
-    }
-    else
-    {
-        displayMotor = "STOP";
-        color = TFT_YELLOW;
-    }
 
     tft.setTextDatum(ML_DATUM);
     tft.setTextColor(color, TFT_BLACK);
-    tft.drawString(displayMotor, CONTENT_L, 200, 4);
+    tft.drawString(motorStatus, CONTENT_L, 200, 4);
 }
 
 void DisplayManager::drawStatus()
