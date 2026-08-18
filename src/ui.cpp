@@ -33,20 +33,6 @@ void UIManager::update()
     downHoldState = (currentDown == LOW);
     startState = (currentStart == LOW);
 
-    if (newUpPress)
-    {
-        selectionPending = true;
-        selectionWasUp = true;
-        selectionTime = millis();
-    }
-
-    if (newDownPress)
-    {
-        selectionPending = true;
-        selectionWasUp = false;
-        selectionTime = millis();
-    }
-
     if (currentUp == LOW)
     {
         if (lastUp == HIGH)
@@ -71,37 +57,35 @@ void UIManager::update()
         downLongState = false;
     }
 
-    // If the user holds a button long enough for manual continuous motion,
-    // cancel its pending mode-selection candidate.
-    if (selectionPending && (upLongState || downLongState))
+    // Toggle ON changes button meaning: UP selects TENSILE,
+    // DOWN selects PUSH. Toggle OFF keeps buttons for manual motion.
+    if (newUpPress)
     {
-        selectionPending = false;
-    }
-
-    // Press one button, then turn the toggle ON to select that mode.
-    // UP selects TENSILE, DOWN selects PUSH.
-    if (selectionPending && startState)
-    {
-        modeChangeState = true;
-        modeDirection = selectionWasUp ? -1 : 1;
-        selectionPending = false;
-    }
-
-    // If the toggle remains OFF and the selection window expires,
-    // convert the short press into the normal manual-step event.
-    if (selectionPending &&
-        (millis() - selectionTime > MODE_CHANGE_WINDOW_MS))
-    {
-        if (selectionWasUp)
-            manualUpEvent = true;
+        if (startState)
+        {
+            modeChangeState = true;
+            modeDirection = -1;
+        }
         else
-            manualDownEvent = true;
+        {
+            manualUpEvent = true;
+        }
+    }
 
-        selectionPending = false;
+    if (newDownPress)
+    {
+        if (startState)
+        {
+            modeChangeState = true;
+            modeDirection = +1;
+        }
+        else
+        {
+            manualDownEvent = true;
+        }
     }
 
     previousStartState = startState;
-
     lastUp = currentUp;
     lastDown = currentDown;
     lastStart = currentStart;
