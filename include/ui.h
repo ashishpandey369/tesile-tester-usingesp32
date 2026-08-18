@@ -21,8 +21,7 @@ public:
     bool upLongHeld() const;
     bool downLongHeld() const;
 
-    // A mode-selection request is created by holding either UP or DOWN
-    // while the toggle switch is turned ON.
+    // Mode changes when opposite buttons are pressed in quick succession.
     bool modeChangeRequested();
 
 private:
@@ -44,6 +43,9 @@ private:
     unsigned long downHoldStart = 0;
 
     bool modeChangeState = false;
+    bool sequenceWaiting = false;
+    bool firstSequenceWasUp = false;
+    unsigned long firstSequenceTime = 0;
 };
 
 extern UIManager ui;
