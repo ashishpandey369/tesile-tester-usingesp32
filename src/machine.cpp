@@ -20,9 +20,6 @@ void MachineController::begin()
 
 void MachineController::update()
 {
-    // RESET/MODE button:
-    // - force != 0 -> reset the virtual force and stop the machine
-    // - force == 0 -> toggle TENSILE/PUSH while the master switch is OFF
     if (ui.resetModePressed())
     {
         if (currentForce > INITIAL_CURRENT_FORCE)
@@ -33,8 +30,6 @@ void MachineController::update()
 
             if (ui.startOn())
             {
-                // Prevent the test from restarting until the master switch
-                // is turned OFF after a reset during an active test.
                 modeChangeLock = true;
                 state = MachineState::STOP;
             }
@@ -59,7 +54,6 @@ void MachineController::update()
         }
     }
 
-    // Toggle OFF is the master stop. It always wins over movement.
     if (!ui.startOn())
     {
         if (state == MachineState::RUNNING)
@@ -79,7 +73,6 @@ void MachineController::update()
         return;
     }
 
-    // Toggle ON + UP/DOWN selects the mode. It does not start motion.
     if (ui.modeChangeRequested())
     {
         motor.stop();
@@ -97,7 +90,6 @@ void MachineController::update()
         return;
     }
 
-    // Stay stopped until the user turns the toggle OFF.
     if (modeChangeLock)
     {
         motor.stop();
@@ -106,7 +98,6 @@ void MachineController::update()
         return;
     }
 
-    // Toggle ON starts the selected test mode.
     if (state != MachineState::RUNNING)
         startTestMotion();
 
@@ -119,8 +110,6 @@ void MachineController::updateManualControl()
     bool upPressed = ui.upPressed();
     bool downPressed = ui.downPressed();
 
-    // After a reset/required switch-off, the next UP/DOWN press clears the
-    // reset-pending state and also performs its normal 150-step movement.
     if (resetPending && (upPressed || downPressed))
     {
         resetCurrentForce();
@@ -128,7 +117,6 @@ void MachineController::updateManualControl()
         state = MachineState::READY;
     }
 
-    // Immediate 150-step manual movement.
     if (upPressed)
     {
         manualContinuousActive = false;
@@ -145,7 +133,6 @@ void MachineController::updateManualControl()
         return;
     }
 
-    // Hold for 1 second, then smooth continuous movement until release.
     if (ui.upLongHeld())
     {
         manualContinuousActive = true;
@@ -223,25 +210,27 @@ void MachineController::refreshDisplay()
 
     if (modeChangeLock)
     {
-        display.setMachineStatus("TURN OFF");
+        display.setMachineStatus("STOP");
         display.setMotorStatus("STOP");
     }
     else if (resetPending)
     {
         display.setMachineStatus("STOP");
-        display.setMotorStatus("PRESS BUTTON");
+        display.setMotorStatus("STOP");
     }
     else if (state == MachineState::RUNNING)
     {
         display.setMachineStatus("RUNNING");
-        display.setMotorStatus(mode == MachineMode::TENSILE ? "ANTICLOCKWISE" : "CLOCKWISE");
+        display.setMotorStatus(mode == MachineMode::TENSILE ? "UP" : "DOWN");
     }
     else if (state == MachineState::READY)
     {
         display.setMachineStatus("READY");
 
-        if (motor.isRunning())
-            display.setMotorStatus("MANUAL");
+        if (ui.upHeld() || motor.isRunning())
+            display.setMotorStatus("UP");
+        else if (ui.downHeld())
+            display.setMotorStatus("DOWN");
         else
             display.setMotorStatus("STOP");
     }
