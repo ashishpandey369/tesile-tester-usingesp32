@@ -36,6 +36,7 @@ namespace
 {
     PNG logoPng;
     File logoFile;
+    TFT_eSPI *logoTft = nullptr;
 
     void *logoOpen(const char *filename, int32_t *size)
     {
@@ -74,6 +75,9 @@ namespace
 
     int logoDraw(PNGDRAW *pDraw)
     {
+        if (!logoTft)
+            return 0;
+
         if ((pDraw->y % LOGO_SAMPLE) != 0)
             return 1;
 
@@ -95,7 +99,7 @@ namespace
             scaledLine[x] = lineBuffer[sourceX < pDraw->iWidth ? sourceX : pDraw->iWidth - 1];
         }
 
-        display.tft.pushImage(
+        logoTft->pushImage(
             LOGO_X,
             LOGO_Y + (pDraw->y / LOGO_SAMPLE),
             scaledWidth,
@@ -103,41 +107,6 @@ namespace
             scaledLine);
 
         return 1;
-    }
-
-    void drawLogo()
-    {
-        if (!LittleFS.exists(LOGO_PATH))
-        {
-            Serial.println("Logo not found: /logo.png");
-            return;
-        }
-
-        int16_t rc = logoPng.open(
-            LOGO_PATH,
-            logoOpen,
-            logoClose,
-            logoRead,
-            logoSeek,
-            logoDraw);
-
-        if (rc != PNG_SUCCESS)
-        {
-            Serial.printf("Logo PNG open failed: %d\n", rc);
-            return;
-        }
-
-        if (logoPng.getWidth() > LOGO_MAX_WIDTH)
-        {
-            Serial.printf("Logo too wide: %d px\n", logoPng.getWidth());
-            logoPng.close();
-            return;
-        }
-
-        display.tft.startWrite();
-        logoPng.decode(nullptr, 0);
-        display.tft.endWrite();
-        logoPng.close();
     }
 }
 
@@ -186,7 +155,7 @@ void DisplayManager::showBootScreen()
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
     tft.drawCentreString("PUSH/PULL TESTER", 240, 88, 4);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.drawCentreString("ESP32 TENSILE TESTER", 240, 132, 2);
+    tft.drawCentreString("ESP32 TEST SYSTEM", 240, 132, 2);
     tft.drawCentreString("Initializing...", 240, 178, 2);
     delay(BOOT_SCREEN_TIME);
     showHomeScreen();
@@ -218,6 +187,46 @@ void DisplayManager::showErrorScreen(const String &msg)
     tft.drawCentreString("AND RESTART", 240, 228, 2);
 }
 
+void DisplayManager::drawLogo()
+{
+    if (!LittleFS.exists(LOGO_PATH))
+    {
+        Serial.println("Logo not found: /logo.png");
+        return;
+    }
+
+    logoTft = &tft;
+
+    int16_t rc = logoPng.open(
+        LOGO_PATH,
+        logoOpen,
+        logoClose,
+        logoRead,
+        logoSeek,
+        logoDraw);
+
+    if (rc != PNG_SUCCESS)
+    {
+        Serial.printf("Logo PNG open failed: %d\n", rc);
+        logoTft = nullptr;
+        return;
+    }
+
+    if (logoPng.getWidth() > LOGO_MAX_WIDTH)
+    {
+        Serial.printf("Logo too wide: %d px\n", logoPng.getWidth());
+        logoPng.close();
+        logoTft = nullptr;
+        return;
+    }
+
+    tft.startWrite();
+    logoPng.decode(nullptr, 0);
+    tft.endWrite();
+    logoPng.close();
+    logoTft = nullptr;
+}
+
 void DisplayManager::drawLayout()
 {
     layoutDrawn = true;
@@ -232,6 +241,7 @@ void DisplayManager::drawLayout()
     drawLogo();
     tft.drawFastHLine(OUTER_X + 8, HEADER_LINE_Y, OUTER_W - 16, TFT_DARKGREY);
 
+    // Keep all four fields as separate boxes.
     tft.drawRoundRect(LEFT_X, TOP_Y, CELL_W, CELL_H, 5, TFT_WHITE);
     tft.drawRoundRect(RIGHT_X, TOP_Y, CELL_W, CELL_H, 5, TFT_WHITE);
     tft.drawRoundRect(LEFT_X, BOTTOM_Y, CELL_W, CELL_H, 5, TFT_WHITE);
@@ -258,7 +268,6 @@ void DisplayManager::drawForce()
     const int16_t y = TOP_Y + 29;
     const int16_t w = CELL_W - 8;
     const int16_t h = CELL_H - 34;
-
     tft.fillRect(x, y, w, h, TFT_BLACK);
 
     String value = String(currentForce, 3);
