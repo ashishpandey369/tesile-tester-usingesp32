@@ -8,7 +8,7 @@
 //====================================================
 
 #define PROJECT_NAME "GoldTester"
-#define PROJECT_VERSION "2.1.0"
+#define PROJECT_VERSION "2.2.0"
 
 //====================================================
 // Display Configuration
@@ -35,7 +35,7 @@ constexpr float MAX_VIRTUAL_FORCE_KG = 99.999f;
 //====================================================
 
 constexpr float MOTOR_MAX_SPEED = 2000.0f;
-constexpr float MOTOR_NORMAL_SPEED = 1200.0f;
+constexpr float MOTOR_NORMAL_SPEED = 900.0f;
 constexpr float MOTOR_RETURN_SPEED = 800.0f;
 constexpr float MOTOR_ACCELERATION = 1000.0f;
 
@@ -47,7 +47,7 @@ constexpr float MANUAL_HOLD_SPEED = 900.0f;
 // Mode / Button Configuration
 //====================================================
 
-constexpr uint16_t BUTTON_LONG_PRESS_MS = 400;
+constexpr uint16_t BUTTON_LONG_PRESS_MS = 2000;
 constexpr uint16_t BUTTON_DEBOUNCE_MS = 30;
 
 // Hold either UP or DOWN while turning the toggle ON to change mode.
