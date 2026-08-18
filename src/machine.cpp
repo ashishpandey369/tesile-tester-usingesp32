@@ -13,7 +13,7 @@ void MachineController::begin()
     manualContinuousActive = false;
 
     display.setCurrentForce(currentForce);
-    display.setMode("TENSILE");
+    display.setMode("PULL");
     display.setMotorStatus("STOP");
     display.setMachineStatus("READY");
 }
@@ -206,7 +206,7 @@ void MachineController::toggleMode()
 void MachineController::refreshDisplay()
 {
     display.setCurrentForce(currentForce);
-    display.setMode(mode == MachineMode::TENSILE ? "TENSILE" : "PUSH");
+    display.setMode(mode == MachineMode::TENSILE ? "PULL" : "PUSH");
 
     // Always read the actual motor controller state.
     // +1 = UP, -1 = DOWN, 0 = STOP.
