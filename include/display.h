@@ -17,10 +17,16 @@ public:
     void showHomeScreen();
     void showErrorScreen(const String &msg);
 
-    void setCurrentForce(float value);
-    void setMode(const String &mode);
-    void setMotorStatus(const String &status);
-    void setMachineStatus(const String &status);
+    void updateForce(float value);
+    void updateMode(const String &mode);
+    void updateMotor(const String &status);
+    void updateStatus(const String &status);
+
+    // Compatibility API used by machine.cpp.
+    void setCurrentForce(float value) { updateForce(value); }
+    void setMode(const String &mode) { updateMode(mode); }
+    void setMotorStatus(const String &status) { updateMotor(status); }
+    void setMachineStatus(const String &status) { updateStatus(status); }
 
     void clear();
 
