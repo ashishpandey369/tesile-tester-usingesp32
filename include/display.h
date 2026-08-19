@@ -17,11 +17,10 @@ public:
     void showHomeScreen();
     void showErrorScreen(const String &msg);
 
-    // Keep these names aligned with the current display.cpp implementation.
-    void updateForce(float value);
-    void updateMode(const String &mode);
-    void updateMotor(const String &status);
-    void updateStatus(const String &status);
+    void setCurrentForce(float value);
+    void setMode(const String &mode);
+    void setMotorStatus(const String &status);
+    void setMachineStatus(const String &status);
 
     void clear();
 
