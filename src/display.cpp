@@ -13,7 +13,7 @@ DisplayManager display;
 #define OUTER_H 308
 #define HEADER_LINE_Y 50
 
-// Keep the working header logo exactly where it was.
+// Logo bitmap is retained but hidden temporarily from the UI.
 #define LOGO_X 14
 #define LOGO_Y 14
 #define LOGO_W 64
@@ -31,22 +31,19 @@ DisplayManager display;
 #define TOP_Y GRID_Y
 #define BOTTOM_Y (GRID_Y + CELL_H + CELL_GAP)
 
-// Keep the same startup logo dimensions as the known-good version.
 #define STARTUP_SCALE 4
 #define STARTUP_LOGO_W (LOGO_W * STARTUP_SCALE)
 #define STARTUP_LOGO_H (LOGO_H * STARTUP_SCALE)
 #define STARTUP_LOGO_X ((SCREEN_W - STARTUP_LOGO_W) / 2)
 #define STARTUP_LOGO_Y 42
 
-// EXACT SAME 64x40 logo bitmap from commit 06efa459ef2d0550eda2c3115fe82f68aee8efa9.
-// The artwork itself is unchanged. Only the startup enlargement is filtered.
+// EXACT SAME 64x40 logo bitmap from the working version.
 static const uint8_t tanishqLogo[LOGO_W * LOGO_H / 8] PROGMEM = {
     0x00, 0x00, 0x03, 0xFF, 0xFC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0xFF, 0xFE, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x0F, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x1F, 0x81, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x1F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x80, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x1F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x80, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x1F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F, 0x80, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x1D, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x19, 0x80, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x1F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1D, 0x80, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x19, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x39, 0xC0, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x30, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x60, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0xE0, 0x70, 0x00, 0x00, 0x00, 0x01, 0x80, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -80,7 +77,6 @@ static inline uint16_t logoGray565(uint8_t gray)
 static void drawSmoothStartupLogo(TFT_eSPI &tft)
 {
     static uint16_t line[STARTUP_LOGO_W];
-
     tft.startWrite();
     for (int oy = 0; oy < STARTUP_LOGO_H; ++oy)
     {
@@ -88,27 +84,22 @@ static void drawSmoothStartupLogo(TFT_eSPI &tft)
         const int y0 = static_cast<int>(floorf(sy));
         const int y1 = y0 + 1;
         const float fy = sy - static_cast<float>(y0);
-
         for (int ox = 0; ox < STARTUP_LOGO_W; ++ox)
         {
             const float sx = (static_cast<float>(ox) + 0.5f) / STARTUP_SCALE - 0.5f;
             const int x0 = static_cast<int>(floorf(sx));
             const int x1 = x0 + 1;
             const float fx = sx - static_cast<float>(x0);
-
             const float p00 = logoPixel(x0, y0) ? 255.0f : 0.0f;
             const float p10 = logoPixel(x1, y0) ? 255.0f : 0.0f;
             const float p01 = logoPixel(x0, y1) ? 255.0f : 0.0f;
             const float p11 = logoPixel(x1, y1) ? 255.0f : 0.0f;
-
             const float top = p00 + (p10 - p00) * fx;
             const float bottom = p01 + (p11 - p01) * fx;
             const uint8_t gray = static_cast<uint8_t>(top + (bottom - top) * fy + 0.5f);
             line[ox] = logoGray565(gray);
         }
-
-        tft.pushImage(STARTUP_LOGO_X, STARTUP_LOGO_Y + oy,
-                      STARTUP_LOGO_W, 1, line);
+        tft.pushImage(STARTUP_LOGO_X, STARTUP_LOGO_Y + oy, STARTUP_LOGO_W, 1, line);
     }
     tft.endWrite();
 }
@@ -142,15 +133,11 @@ void DisplayManager::showBootScreen()
 {
     clear();
     tft.setTextDatum(MC_DATUM);
-
-    // Startup screen: no logo. Use the product name prominently and keep
-    // the initialization message directly underneath it.
+    // Logo hidden temporarily; product name centered on startup.
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.drawCentreString("PUSH/PULL TESTER", SCREEN_W / 2, 125, 6);
-
+    tft.drawCentreString("PUSH PULL TESTER", SCREEN_W / 2, 125, 6);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.drawCentreString("Initializing...", SCREEN_W / 2, 175, 4);
-
     delay(3000);
     showHomeScreen();
 }
@@ -177,8 +164,7 @@ void DisplayManager::showErrorScreen(const String &msg)
 
 void DisplayManager::drawLogo()
 {
-    tft.fillRect(LOGO_X, LOGO_Y, LOGO_W, LOGO_H, TFT_BLACK);
-    tft.drawBitmap(LOGO_X, LOGO_Y, tanishqLogo, LOGO_W, LOGO_H, TFT_WHITE, TFT_BLACK);
+    // Temporarily hidden. Bitmap remains above so it can be restored later.
 }
 
 void DisplayManager::drawLayout()
@@ -190,8 +176,7 @@ void DisplayManager::drawLayout()
     drawLogo();
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    tft.drawCentreString("PUSH/PULL TESTER", 300, 25, 4);
-    tft.drawCentreString("PUSH/PULL TESTER", 301, 25, 4);
+    tft.drawCentreString("PUSH PULL TESTER", SCREEN_W / 2, 25, 4);
     tft.drawFastHLine(OUTER_X + 8, HEADER_LINE_Y, OUTER_W - 16, TFT_DARKGREY);
     tft.drawRoundRect(LEFT_X, TOP_Y, CELL_W, CELL_H, 5, TFT_WHITE);
     tft.drawRoundRect(RIGHT_X, TOP_Y, CELL_W, CELL_H, 5, TFT_WHITE);
@@ -259,12 +244,7 @@ void DisplayManager::drawStatus()
     tft.drawCentreString(machineStatus, RIGHT_X + CELL_W / 2, BOTTOM_Y + CELL_H / 2 + 4, 4);
 }
 
-void DisplayManager::setCurrentForce(float value)
-{
-    if (value < 0.0f) value = 0.0f;
-    if (value > MAX_VIRTUAL_FORCE_KG) value = MAX_VIRTUAL_FORCE_KG;
-    currentForce = value;
-}
-void DisplayManager::setMode(const String &newMode) { mode = newMode; }
-void DisplayManager::setMotorStatus(const String &status) { motorStatus = status; }
-void DisplayManager::setMachineStatus(const String &status) { machineStatus = status; }
+void DisplayManager::updateForce(float force) { currentForce = force; }
+void DisplayManager::updateMode(const String &newMode) { mode = newMode; }
+void DisplayManager::updateMotor(const String &newMotorStatus) { motorStatus = newMotorStatus; }
+void DisplayManager::updateStatus(const String &newStatus) { machineStatus = newStatus; }
