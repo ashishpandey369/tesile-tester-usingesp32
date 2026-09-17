@@ -2,8 +2,6 @@
 #define MOTOR_H
 
 #include <Arduino.h>
-#include <AccelStepper.h>
-
 #include "pins.h"
 #include "config.h"
 
@@ -17,9 +15,10 @@ public:
     void disable();
 
     // Continuous test motion. direction: +1 = DOWN, -1 = UP.
-    void runContinuous(int direction, float speed);
+    void runContinuous(int direction, float speedPercent);
 
-    // One manual positioning step. direction: +1 = DOWN, -1 = UP.
+    // Short manual movement. With a DC motor this is a timed pulse,
+    // because there is no position feedback.
     void manualStep(int direction);
 
     // Continuous manual movement while a button is held.
@@ -28,20 +27,15 @@ public:
     void stop();
 
     bool isRunning() const;
-    long getCurrentPosition() const;
-
-    // Exact commanded motor direction/state for the display.
     int getDirection() const;
 
 private:
-    AccelStepper stepper = AccelStepper(
-        AccelStepper::DRIVER,
-        STEP_PIN,
-        DIR_PIN);
-
     bool running = false;
-    bool speedMode = false;
     int direction = 0; // -1 = UP, +1 = DOWN, 0 = STOP
+    uint32_t manualStopAt = 0;
+    bool timedManualMove = false;
+
+    void setPwm(int duty);
 };
 
 extern MotorController motor;
