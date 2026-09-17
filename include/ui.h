@@ -17,6 +17,7 @@ public:
 
     bool startOn() const;
     bool startTurnedOn() const;
+    bool startTurnedOff() const;
 
     bool upHeld() const;
     bool downHeld() const;
