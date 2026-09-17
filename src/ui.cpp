@@ -25,6 +25,8 @@ void UIManager::begin()
     Serial.print(lastResetMode);
     Serial.print(" START=");
     Serial.println(lastStart);
+    Serial.print("[START] Initial state: ");
+    Serial.println(startState ? "ON" : "OFF");
 }
 
 void UIManager::update()
@@ -45,11 +47,22 @@ void UIManager::update()
     bool newDownPress = (lastDown == HIGH && currentDown == LOW);
     bool newResetModePress = (lastResetMode == HIGH && currentResetMode == LOW);
 
-    // Capture the previous state before updating the current state so
-    // START ON/OFF transitions are detected correctly by the machine.
+    // Capture the previous START state before updating the current state.
     bool oldStartState = startState;
     startState = (currentStart == LOW);
     previousStartState = oldStartState;
+
+    // Report every START transition immediately.
+    if (startState != oldStartState)
+    {
+        if (startState)
+            Serial.println("[START] SWITCH ON -> automatic motion ENABLED");
+        else
+            Serial.println("[START] SWITCH OFF -> automatic motion DISABLED");
+    }
+
+    upHoldState = (currentUp == LOW);
+    downHoldState = (currentDown == LOW);
 
     if (currentUp == LOW)
     {
