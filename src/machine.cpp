@@ -31,7 +31,6 @@ void MachineController::update()
 
             if (ui.startOn())
             {
-                modeChangeLock = true;
                 state = MachineState::STOP;
             }
             else
@@ -55,51 +54,38 @@ void MachineController::update()
         }
     }
 
+    // START is the master ON/OFF control. When OFF, automatic motion
+    // is stopped immediately. When ON, the automatic motor is kept
+    // running continuously unless a safety/reset action stops it.
     if (!ui.startOn())
     {
-        if (state == MachineState::RUNNING)
+        if (motor.isRunning() && state == MachineState::RUNNING)
             stopTestMotion();
 
-        if (modeChangeLock)
-        {
-            modeChangeLock = false;
-            resetPending = true;
-            manualContinuousActive = false;
-            motor.stop();
-            state = MachineState::STOP;
-        }
-
+        modeChangeLock = false;
+        resetPending = false;
         updateManualControl();
         refreshDisplay();
         return;
     }
 
+    // UP/DOWN while START is ON select the requested test mode.
+    // Changing mode no longer requires cycling the START toggle.
     if (ui.modeChangeRequested())
     {
-        motor.stop();
-        manualContinuousActive = false;
-
         if (ui.requestedModeDirection() < 0)
             mode = MachineMode::TENSILE;
         else
             mode = MachineMode::PUSH;
 
-        modeChangeLock = true;
-        resetPending = false;
-        state = MachineState::STOP;
-        refreshDisplay();
-        return;
-    }
-
-    if (modeChangeLock)
-    {
         motor.stop();
-        state = MachineState::STOP;
-        refreshDisplay();
-        return;
+        manualContinuousActive = false;
+        state = MachineState::READY;
+        forceLastUpdateMillis = millis();
     }
 
-    if (state != MachineState::RUNNING)
+    // START ON always ensures automatic motion is active.
+    if (state != MachineState::RUNNING || !motor.isRunning())
         startTestMotion();
 
     updateVirtualForce();
