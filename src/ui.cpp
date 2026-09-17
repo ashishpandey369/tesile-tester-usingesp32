@@ -45,8 +45,8 @@ void UIManager::update()
     bool newDownPress = (lastDown == HIGH && currentDown == LOW);
     bool newResetModePress = (lastResetMode == HIGH && currentResetMode == LOW);
 
-    // Keep the previous START state before replacing it. This gives us
-    // reliable ON/OFF edge detection for the master motor toggle.
+    // Capture the previous state before updating the current state so
+    // START ON/OFF transitions are detected correctly by the machine.
     bool oldStartState = startState;
     startState = (currentStart == LOW);
     previousStartState = oldStartState;
@@ -75,36 +75,18 @@ void UIManager::update()
         downLongState = false;
     }
 
-    // UP/DOWN select the operating mode only while START is ON.
-    // With START OFF they generate the manual 1-second/hold controls.
-    if (newUpPress)
+    // UP/DOWN are manual motor controls only when START is OFF.
+    // START ON is reserved for automatic motion in the selected mode.
+    if (newUpPress && !startState)
     {
-        if (startState)
-        {
-            modeChangeState = true;
-            modeDirection = -1;
-            Serial.println("[UI] UP press -> TENSILE/PULL request");
-        }
-        else
-        {
-            manualUpEvent = true;
-            Serial.println("[UI] UP press -> manual +1 step");
-        }
+        manualUpEvent = true;
+        Serial.println("[UI] UP press -> manual +1 step");
     }
 
-    if (newDownPress)
+    if (newDownPress && !startState)
     {
-        if (startState)
-        {
-            modeChangeState = true;
-            modeDirection = +1;
-            Serial.println("[UI] DOWN press -> PUSH request");
-        }
-        else
-        {
-            manualDownEvent = true;
-            Serial.println("[UI] DOWN press -> manual -1 step");
-        }
+        manualDownEvent = true;
+        Serial.println("[UI] DOWN press -> manual -1 step");
     }
 
     if (newResetModePress)
