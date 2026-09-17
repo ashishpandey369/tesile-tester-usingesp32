@@ -13,7 +13,8 @@ void UIManager::begin()
     lastDown = digitalRead(BUTTON_DOWN_PIN);
     lastResetMode = digitalRead(RESET_MODE_BUTTON_PIN);
     lastStart = digitalRead(START_SWITCH_PIN);
-    previousStartState = (lastStart == LOW);
+    startState = (lastStart == LOW);
+    previousStartState = startState;
 
     Serial.println("[UI] Inputs initialized (INPUT_PULLUP)");
     Serial.print("[UI] UP=");
@@ -44,9 +45,11 @@ void UIManager::update()
     bool newDownPress = (lastDown == HIGH && currentDown == LOW);
     bool newResetModePress = (lastResetMode == HIGH && currentResetMode == LOW);
 
-    upHoldState = (currentUp == LOW);
-    downHoldState = (currentDown == LOW);
+    // Keep the previous START state before replacing it. This gives us
+    // reliable ON/OFF edge detection for the master motor toggle.
+    bool oldStartState = startState;
     startState = (currentStart == LOW);
+    previousStartState = oldStartState;
 
     if (currentUp == LOW)
     {
@@ -72,8 +75,8 @@ void UIManager::update()
         downLongState = false;
     }
 
-    // Toggle ON changes button meaning: UP selects TENSILE,
-    // DOWN selects PUSH. Toggle OFF keeps buttons for manual motion.
+    // UP/DOWN select the operating mode only while START is ON.
+    // With START OFF they generate the manual 1-second/hold controls.
     if (newUpPress)
     {
         if (startState)
@@ -110,7 +113,6 @@ void UIManager::update()
         Serial.println("[UI] RESET/MODE press detected");
     }
 
-    previousStartState = startState;
     lastUp = currentUp;
     lastDown = currentDown;
     lastResetMode = currentResetMode;
@@ -162,6 +164,11 @@ bool UIManager::startOn() const
 bool UIManager::startTurnedOn() const
 {
     return startState && !previousStartState;
+}
+
+bool UIManager::startTurnedOff() const
+{
+    return !startState && previousStartState;
 }
 
 bool UIManager::upHeld() const
