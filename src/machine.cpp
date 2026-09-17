@@ -199,12 +199,11 @@ void MachineController::updateVirtualForce()
     // does not execute exactly once every millisecond.
     currentForce += elapsedMs * FORCE_INCREASE_PER_MS_KG;
 
+    // The virtual force display saturates at the configured maximum,
+    // but reaching that value does not stop the motor. The START toggle
+    // remains the master control for continuous automatic motion.
     if (currentForce >= MAX_VIRTUAL_FORCE_KG)
-    {
         currentForce = MAX_VIRTUAL_FORCE_KG;
-        motor.stop();
-        state = MachineState::STOP;
-    }
 
     forceLastUpdateMillis = now;
 }
