@@ -1,65 +1,94 @@
-#include <math.h>
 #include "motor.h"
 
 MotorController motor;
 
+namespace
+{
+    constexpr uint32_t PWM_FREQUENCY_HZ = 20000;
+    constexpr uint8_t PWM_RESOLUTION_BITS = 8;
+    constexpr uint8_t RPWM_CHANNEL = 0;
+    constexpr uint8_t LPWM_CHANNEL = 1;
+    constexpr int PWM_MAX = 255;
+}
+
 void MotorController::begin()
 {
-    pinMode(ENABLE_PIN, OUTPUT);
-    disable();
+    pinMode(BTS7960_R_EN_PIN, OUTPUT);
+    pinMode(BTS7960_L_EN_PIN, OUTPUT);
+    pinMode(BTS7960_RPWM_PIN, OUTPUT);
+    pinMode(BTS7960_LPWM_PIN, OUTPUT);
 
-    stepper.setMaxSpeed(MOTOR_MAX_SPEED);
-    stepper.setAcceleration(MOTOR_ACCELERATION);
-    stepper.setCurrentPosition(0);
+    // Use the LEDC API supported by the ESP32 Arduino core used by
+    // this PlatformIO project: configure channels, then attach pins.
+    ledcSetup(RPWM_CHANNEL, PWM_FREQUENCY_HZ, PWM_RESOLUTION_BITS);
+    ledcSetup(LPWM_CHANNEL, PWM_FREQUENCY_HZ, PWM_RESOLUTION_BITS);
+    ledcAttachPin(BTS7960_RPWM_PIN, RPWM_CHANNEL);
+    ledcAttachPin(BTS7960_LPWM_PIN, LPWM_CHANNEL);
+
+    disable();
 }
 
 void MotorController::update()
 {
-    if (speedMode)
+    if (timedManualMove && millis() >= manualStopAt)
     {
-        stepper.runSpeed();
-        return;
-    }
-
-    stepper.run();
-
-    if (running && stepper.distanceToGo() == 0)
-    {
-        digitalWrite(ENABLE_PIN, MOTOR_DISABLE);
-        running = false;
-        direction = 0;
+        timedManualMove = false;
+        stop();
     }
 }
 
 void MotorController::enable()
 {
-    digitalWrite(ENABLE_PIN, MOTOR_ENABLE);
+    digitalWrite(BTS7960_R_EN_PIN, MOTOR_ENABLE);
+    digitalWrite(BTS7960_L_EN_PIN, MOTOR_ENABLE);
 }
 
 void MotorController::disable()
 {
-    digitalWrite(ENABLE_PIN, MOTOR_DISABLE);
+    ledcWrite(RPWM_CHANNEL, 0);
+    ledcWrite(LPWM_CHANNEL, 0);
+    digitalWrite(BTS7960_R_EN_PIN, MOTOR_DISABLE);
+    digitalWrite(BTS7960_L_EN_PIN, MOTOR_DISABLE);
+
     running = false;
-    speedMode = false;
     direction = 0;
+    timedManualMove = false;
 }
 
-void MotorController::runContinuous(int requestedDirection, float speed)
+void MotorController::setPwm(int duty)
+{
+    duty = constrain(duty, 0, PWM_MAX);
+
+    // Only one BTS7960 half-bridge is PWM driven at a time.
+    if (direction > 0)
+    {
+        ledcWrite(RPWM_CHANNEL, duty);
+        ledcWrite(LPWM_CHANNEL, 0);
+    }
+    else if (direction < 0)
+    {
+        ledcWrite(RPWM_CHANNEL, 0);
+        ledcWrite(LPWM_CHANNEL, duty);
+    }
+    else
+    {
+        ledcWrite(RPWM_CHANNEL, 0);
+        ledcWrite(LPWM_CHANNEL, 0);
+    }
+}
+
+void MotorController::runContinuous(int requestedDirection, float speedPercent)
 {
     if (requestedDirection == 0)
         return;
 
     enable();
-    speedMode = true;
+    timedManualMove = false;
     running = true;
-
-    // Keep the physical motor direction exactly as it was before the
-    // accidental direction inversion. The display inversion is handled
-    // separately by the UI/status layer.
     direction = requestedDirection > 0 ? +1 : -1;
 
-    float signedSpeed = fabsf(speed) * (direction > 0 ? 1.0f : -1.0f);
-    stepper.setSpeed(signedSpeed);
+    int duty = static_cast<int>((constrain(speedPercent, 0.0f, 100.0f) / 100.0f) * PWM_MAX);
+    setPwm(duty);
 }
 
 void MotorController::manualStep(int requestedDirection)
@@ -68,15 +97,13 @@ void MotorController::manualStep(int requestedDirection)
         return;
 
     enable();
-    speedMode = false;
     running = true;
-
-    // Restore the original physical motor direction.
+    timedManualMove = true;
     direction = requestedDirection > 0 ? +1 : -1;
 
-    stepper.setMaxSpeed(MOTOR_NORMAL_SPEED);
-    stepper.setAcceleration(MOTOR_ACCELERATION);
-    stepper.move(direction > 0 ? MANUAL_STEP_STEPS : -MANUAL_STEP_STEPS);
+    int duty = static_cast<int>((constrain(MANUAL_STEP_SPEED_PERCENT, 0.0f, 100.0f) / 100.0f) * PWM_MAX);
+    setPwm(duty);
+    manualStopAt = millis() + MANUAL_STEP_TIME_MS;
 }
 
 void MotorController::manualHold(int requestedDirection)
@@ -85,31 +112,29 @@ void MotorController::manualHold(int requestedDirection)
         return;
 
     enable();
-    speedMode = true;
+    timedManualMove = false;
     running = true;
-
-    // Restore the original physical motor direction.
     direction = requestedDirection > 0 ? +1 : -1;
 
-    float signedSpeed = MANUAL_HOLD_SPEED * (direction > 0 ? 1.0f : -1.0f);
-    stepper.setSpeed(signedSpeed);
+    int duty = static_cast<int>((constrain(MANUAL_HOLD_SPEED_PERCENT, 0.0f, 100.0f) / 100.0f) * PWM_MAX);
+    setPwm(duty);
 }
 
 void MotorController::stop()
 {
-    stepper.setSpeed(0.0f);
-    stepper.stop();
-    disable();
+    ledcWrite(RPWM_CHANNEL, 0);
+    ledcWrite(LPWM_CHANNEL, 0);
+    digitalWrite(BTS7960_R_EN_PIN, MOTOR_DISABLE);
+    digitalWrite(BTS7960_L_EN_PIN, MOTOR_DISABLE);
+
+    running = false;
+    direction = 0;
+    timedManualMove = false;
 }
 
 bool MotorController::isRunning() const
 {
     return running;
-}
-
-long MotorController::getCurrentPosition() const
-{
-    return const_cast<AccelStepper &>(stepper).currentPosition();
 }
 
 int MotorController::getDirection() const

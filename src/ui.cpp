@@ -14,6 +14,16 @@ void UIManager::begin()
     lastResetMode = digitalRead(RESET_MODE_BUTTON_PIN);
     lastStart = digitalRead(START_SWITCH_PIN);
     previousStartState = (lastStart == LOW);
+
+    Serial.println("[UI] Inputs initialized (INPUT_PULLUP)");
+    Serial.print("[UI] UP=");
+    Serial.print(lastUp);
+    Serial.print(" DOWN=");
+    Serial.print(lastDown);
+    Serial.print(" RESET/MODE=");
+    Serial.print(lastResetMode);
+    Serial.print(" START=");
+    Serial.println(lastStart);
 }
 
 void UIManager::update()
@@ -70,10 +80,12 @@ void UIManager::update()
         {
             modeChangeState = true;
             modeDirection = -1;
+            Serial.println("[UI] UP press -> TENSILE/PULL request");
         }
         else
         {
             manualUpEvent = true;
+            Serial.println("[UI] UP press -> manual +1 step");
         }
     }
 
@@ -83,21 +95,42 @@ void UIManager::update()
         {
             modeChangeState = true;
             modeDirection = +1;
+            Serial.println("[UI] DOWN press -> PUSH request");
         }
         else
         {
             manualDownEvent = true;
+            Serial.println("[UI] DOWN press -> manual -1 step");
         }
     }
 
     if (newResetModePress)
+    {
         resetModeState = true;
+        Serial.println("[UI] RESET/MODE press detected");
+    }
 
     previousStartState = startState;
     lastUp = currentUp;
     lastDown = currentDown;
     lastResetMode = currentResetMode;
     lastStart = currentStart;
+
+    static uint32_t lastDebug = 0;
+    if (millis() - lastDebug >= 1000)
+    {
+        lastDebug = millis();
+        Serial.print("[UI RAW] UP=");
+        Serial.print(currentUp);
+        Serial.print(" DOWN=");
+        Serial.print(currentDown);
+        Serial.print(" RESET=");
+        Serial.print(currentResetMode);
+        Serial.print(" START=");
+        Serial.print(currentStart);
+        Serial.print(" | START_STATE=");
+        Serial.println(startState ? "ON" : "OFF");
+    }
 }
 
 bool UIManager::upPressed()

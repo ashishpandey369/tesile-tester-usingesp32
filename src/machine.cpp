@@ -11,6 +11,7 @@ void MachineController::begin()
     modeChangeLock = false;
     resetPending = false;
     manualContinuousActive = false;
+    forceLastUpdateMillis = millis();
 
     display.setCurrentForce(currentForce);
     display.setMode("PULL");
@@ -162,37 +163,50 @@ void MachineController::startTestMotion()
     // PUSH         = clockwise    (+1) and displayed as DOWN.
     int direction = (mode == MachineMode::TENSILE) ? -1 : +1;
 
-    motor.runContinuous(direction, MANUAL_HOLD_SPEED);
-    lastRunPosition = motor.getCurrentPosition();
+    motor.runContinuous(direction, MOTOR_NORMAL_SPEED_PERCENT);
     state = MachineState::RUNNING;
+    forceLastUpdateMillis = millis();
 }
 
 void MachineController::stopTestMotion()
 {
     motor.stop();
     state = MachineState::STOP;
+    forceLastUpdateMillis = millis();
 }
 
 void MachineController::resetCurrentForce()
 {
     currentForce = INITIAL_CURRENT_FORCE;
-    lastRunPosition = motor.getCurrentPosition();
+    forceLastUpdateMillis = millis();
 }
 
 void MachineController::updateVirtualForce()
 {
-    long position = motor.getCurrentPosition();
-    long deltaSteps = labs(position - lastRunPosition);
-
-    if (deltaSteps > 0)
+    if (!motor.isRunning() || state != MachineState::RUNNING)
     {
-        currentForce += deltaSteps * FORCE_PER_MOTOR_STEP_KG;
-
-        if (currentForce > MAX_VIRTUAL_FORCE_KG)
-            currentForce = MAX_VIRTUAL_FORCE_KG;
-
-        lastRunPosition = position;
+        forceLastUpdateMillis = millis();
+        return;
     }
+
+    uint32_t now = millis();
+    uint32_t elapsedMs = now - forceLastUpdateMillis;
+    if (elapsedMs == 0)
+        return;
+
+    // 12 g is added for every elapsed millisecond while the automatic
+    // test motor is running. This remains stable even if the main loop
+    // does not execute exactly once every millisecond.
+    currentForce += elapsedMs * FORCE_INCREASE_PER_MS_KG;
+
+    if (currentForce >= MAX_VIRTUAL_FORCE_KG)
+    {
+        currentForce = MAX_VIRTUAL_FORCE_KG;
+        motor.stop();
+        state = MachineState::STOP;
+    }
+
+    forceLastUpdateMillis = now;
 }
 
 void MachineController::toggleMode()
@@ -208,8 +222,6 @@ void MachineController::refreshDisplay()
     display.setCurrentForce(currentForce);
     display.setMode(mode == MachineMode::TENSILE ? "PULL" : "PUSH");
 
-    // Always read the actual motor controller state.
-    // +1 = UP, -1 = DOWN, 0 = STOP.
     int motorDirection = motor.getDirection();
 
     if (motorDirection > 0)
