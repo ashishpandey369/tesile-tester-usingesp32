@@ -35,16 +35,11 @@ private:
     MachineState state = MachineState::READY;
 
     float currentForce = INITIAL_CURRENT_FORCE;
-    long lastRunPosition = 0;
+    uint32_t forceLastUpdateMillis = 0;
 
     bool modeChangeLock = false;
     bool resetPending = false;
     bool manualContinuousActive = false;
-
-    // Last commanded/displayed motor direction.
-    // This is kept separately so a short 150-step move is still shown
-    // correctly after the motor finishes the move.
-    String motorDisplayDirection = "STOP";
 
     void updateManualControl();
     void startTestMotion();
