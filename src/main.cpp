@@ -4,7 +4,6 @@
 #include "pins.h"
 #include "display.h"
 #include "motor.h"
-#include "buzzer.h"
 #include "safety.h"
 #include "ui.h"
 #include "machine.h"
@@ -99,17 +98,15 @@ void setup()
     Serial.println("====================================");
 
     display.begin();
-    buzzer.begin();
     motor.begin();
     safety.begin();
     ui.begin();
     machine.begin();
 
-    buzzer.bootTone();
-    buzzer.readyTone();
-
     Serial.println("Initialization Complete");
     Serial.println("System Ready");
+    Serial.println("START toggle: GPIO14, INPUT_PULLUP, ON=LOW/OFF=HIGH");
+    Serial.println("Buzzer disabled; GPIO14 is dedicated to START switch");
     Serial.println("BTS7960 diagnostic: H = help, F/R = +/-30%, 1-3 = +20/40/60%, 4-6 = -20/40/60%, S = stop");
 }
 
