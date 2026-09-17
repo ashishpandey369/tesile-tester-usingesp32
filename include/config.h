@@ -39,16 +39,16 @@ constexpr float MAX_VIRTUAL_FORCE_KG = 99.999f;
 //====================================================
 
 // Speed is expressed as a PWM percentage (0-100%).
-// Increased above the previous 45% setting so the motor
-// has sufficient starting torque under mechanical load.
-constexpr float MOTOR_NORMAL_SPEED_PERCENT = 65.0f;
-constexpr float MOTOR_RETURN_SPEED_PERCENT = 65.0f;
+// 85% provides sufficient starting torque for the motor/load
+// based on hardware testing at 60% PWM.
+constexpr float MOTOR_NORMAL_SPEED_PERCENT = 85.0f;
+constexpr float MOTOR_RETURN_SPEED_PERCENT = 85.0f;
 
 // Manual movement
 // A short UP/DOWN press runs the DC motor for this duration.
 constexpr uint16_t MANUAL_STEP_TIME_MS = 150;
-constexpr float MANUAL_STEP_SPEED_PERCENT = 65.0f;
-constexpr float MANUAL_HOLD_SPEED_PERCENT = 65.0f;
+constexpr float MANUAL_STEP_SPEED_PERCENT = 85.0f;
+constexpr float MANUAL_HOLD_SPEED_PERCENT = 85.0f;
 
 //====================================================
 // Mode / Button Configuration
