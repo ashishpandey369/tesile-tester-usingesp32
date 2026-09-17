@@ -4,19 +4,15 @@
 #include <Arduino.h>
 
 //====================================================
-// Buzzer
-//====================================================
-
-constexpr uint8_t BUZZER_PIN = 14;
-
-//====================================================
 // User Inputs
 //====================================================
 
 constexpr uint8_t BUTTON_UP_PIN = 22;
 constexpr uint8_t BUTTON_DOWN_PIN = 21;
 constexpr uint8_t RESET_MODE_BUTTON_PIN = 26;
-constexpr uint8_t START_SWITCH_PIN = 13;
+// GPIO14 is now dedicated to the START toggle.
+// The buzzer is no longer used by the active firmware.
+constexpr uint8_t START_SWITCH_PIN = 14;
 
 //====================================================
 // BTS7960 43A H-Bridge + 12V DC Gear Motor
