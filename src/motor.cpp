@@ -6,6 +6,8 @@ namespace
 {
     constexpr uint32_t PWM_FREQUENCY_HZ = 20000;
     constexpr uint8_t PWM_RESOLUTION_BITS = 8;
+    constexpr uint8_t RPWM_CHANNEL = 0;
+    constexpr uint8_t LPWM_CHANNEL = 1;
     constexpr int PWM_MAX = 255;
 }
 
@@ -16,10 +18,12 @@ void MotorController::begin()
     pinMode(BTS7960_RPWM_PIN, OUTPUT);
     pinMode(BTS7960_LPWM_PIN, OUTPUT);
 
-    // ESP32 Arduino LEDC PWM. Both direction inputs use the same
-    // PWM frequency/resolution.
-    ledcAttach(BTS7960_RPWM_PIN, PWM_FREQUENCY_HZ, PWM_RESOLUTION_BITS);
-    ledcAttach(BTS7960_LPWM_PIN, PWM_FREQUENCY_HZ, PWM_RESOLUTION_BITS);
+    // Use the LEDC API supported by the ESP32 Arduino core used by
+    // this PlatformIO project: configure channels, then attach pins.
+    ledcSetup(RPWM_CHANNEL, PWM_FREQUENCY_HZ, PWM_RESOLUTION_BITS);
+    ledcSetup(LPWM_CHANNEL, PWM_FREQUENCY_HZ, PWM_RESOLUTION_BITS);
+    ledcAttachPin(BTS7960_RPWM_PIN, RPWM_CHANNEL);
+    ledcAttachPin(BTS7960_LPWM_PIN, LPWM_CHANNEL);
 
     disable();
 }
@@ -41,8 +45,8 @@ void MotorController::enable()
 
 void MotorController::disable()
 {
-    ledcWrite(BTS7960_RPWM_PIN, 0);
-    ledcWrite(BTS7960_LPWM_PIN, 0);
+    ledcWrite(RPWM_CHANNEL, 0);
+    ledcWrite(LPWM_CHANNEL, 0);
     digitalWrite(BTS7960_R_EN_PIN, MOTOR_DISABLE);
     digitalWrite(BTS7960_L_EN_PIN, MOTOR_DISABLE);
 
@@ -58,18 +62,18 @@ void MotorController::setPwm(int duty)
     // Only one BTS7960 half-bridge is PWM driven at a time.
     if (direction > 0)
     {
-        ledcWrite(BTS7960_RPWM_PIN, duty);
-        ledcWrite(BTS7960_LPWM_PIN, 0);
+        ledcWrite(RPWM_CHANNEL, duty);
+        ledcWrite(LPWM_CHANNEL, 0);
     }
     else if (direction < 0)
     {
-        ledcWrite(BTS7960_RPWM_PIN, 0);
-        ledcWrite(BTS7960_LPWM_PIN, duty);
+        ledcWrite(RPWM_CHANNEL, 0);
+        ledcWrite(LPWM_CHANNEL, duty);
     }
     else
     {
-        ledcWrite(BTS7960_RPWM_PIN, 0);
-        ledcWrite(BTS7960_LPWM_PIN, 0);
+        ledcWrite(RPWM_CHANNEL, 0);
+        ledcWrite(LPWM_CHANNEL, 0);
     }
 }
 
@@ -118,8 +122,8 @@ void MotorController::manualHold(int requestedDirection)
 
 void MotorController::stop()
 {
-    ledcWrite(BTS7960_RPWM_PIN, 0);
-    ledcWrite(BTS7960_LPWM_PIN, 0);
+    ledcWrite(RPWM_CHANNEL, 0);
+    ledcWrite(LPWM_CHANNEL, 0);
     digitalWrite(BTS7960_R_EN_PIN, MOTOR_DISABLE);
     digitalWrite(BTS7960_L_EN_PIN, MOTOR_DISABLE);
 
