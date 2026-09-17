@@ -8,7 +8,7 @@
 //====================================================
 
 #define PROJECT_NAME "GoldTester"
-#define PROJECT_VERSION "2.9.8"
+#define PROJECT_VERSION "3.0.0"
 
 //====================================================
 // Display Configuration
@@ -23,26 +23,30 @@ constexpr uint8_t DISPLAY_ROTATION = 3;
 // Virtual Test Value
 //====================================================
 // No physical load cell is used in this version.
-// Current force is a software test-point value that increases
-// only while the toggle switch is ON and the motor is running.
+// The force value is a software demonstration value.
+// While an automatic test is running, force increases by
+// 12 grams for every elapsed millisecond (0.012 kg/ms).
+//
+// This is NOT a physical force measurement. A real tensile
+// tester needs a load cell + HX711 for measured force.
 
 constexpr float INITIAL_CURRENT_FORCE = 0.000f;
-constexpr float FORCE_PER_MOTOR_STEP_KG = 0.001f;
+constexpr float FORCE_INCREASE_PER_MS_KG = 0.012f; // 12 g/ms
 constexpr float MAX_VIRTUAL_FORCE_KG = 99.999f;
 
 //====================================================
-// Motor Configuration
+// BTS7960 + 12V DC Gear Motor Configuration
 //====================================================
 
-// Deliberately reduced for smoother, more reliable motion.
-constexpr float MOTOR_MAX_SPEED = 1000.0f;
-constexpr float MOTOR_NORMAL_SPEED = 400.0f;
-constexpr float MOTOR_RETURN_SPEED = 400.0f;
-constexpr float MOTOR_ACCELERATION = 300.0f;
+// Speed is expressed as a PWM percentage (0-100%).
+constexpr float MOTOR_NORMAL_SPEED_PERCENT = 45.0f;
+constexpr float MOTOR_RETURN_SPEED_PERCENT = 45.0f;
 
 // Manual movement
-constexpr long MANUAL_STEP_STEPS = 150;
-constexpr float MANUAL_HOLD_SPEED = 400.0f;
+// A short UP/DOWN press runs the DC motor for this duration.
+constexpr uint16_t MANUAL_STEP_TIME_MS = 150;
+constexpr float MANUAL_STEP_SPEED_PERCENT = 35.0f;
+constexpr float MANUAL_HOLD_SPEED_PERCENT = 45.0f;
 
 //====================================================
 // Mode / Button Configuration
