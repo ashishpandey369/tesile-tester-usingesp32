@@ -4,14 +4,6 @@
 #include <Arduino.h>
 
 //====================================================
-// Legacy HX711 pins
-//====================================================
-// Kept documented for reference only. The current tester
-// uses a software force value and does not use an HX711.
-constexpr uint8_t HX711_DT_PIN = 4;
-constexpr uint8_t HX711_SCK_PIN = 5;
-
-//====================================================
 // Buzzer
 //====================================================
 
@@ -31,9 +23,8 @@ constexpr uint8_t START_SWITCH_PIN = 13;
 //====================================================
 // RPWM/LPWM control motor direction and speed.
 // R_EN/L_EN enable the two BTS7960 half-bridges.
-//
-// GPIO4 is no longer used by an HX711 in the active firmware,
-// so it is repurposed for L_EN.
+// GPIO4 is available because the active firmware no longer
+// uses an HX711 load-cell interface.
 constexpr uint8_t BTS7960_RPWM_PIN = 25;
 constexpr uint8_t BTS7960_LPWM_PIN = 17;
 constexpr uint8_t BTS7960_R_EN_PIN = 16;
