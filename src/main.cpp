@@ -15,7 +15,7 @@ void setup()
 
     Serial.println();
     Serial.println("====================================");
-    Serial.println(" GoldTester v2.0.0 Starting...");
+    Serial.println(" GoldTester v" PROJECT_VERSION " Starting...");
     Serial.println(" Motion-Controlled Tensile / Push Tester");
     Serial.println("====================================");
 
@@ -41,10 +41,10 @@ void loop()
     safety.update();
 
     // Machine logic handles the toggle switch, mode selection,
-    // manual jog, automatic motion and virtual current-force value.
+    // manual jog, automatic motion and time-based virtual force.
     machine.update();
 
-    // Step pulses are generated after the machine decides the motion.
+    // Update the BTS7960 motor controller and timed manual moves.
     motor.update();
 
     display.update();
@@ -66,10 +66,16 @@ void loop()
         else
             Serial.print("STOP");
 
-        Serial.print(" | Position: ");
-        Serial.print(motor.getCurrentPosition());
-
         Serial.print(" | Motor: ");
-        Serial.println(motor.isRunning() ? "RUNNING" : "STOP");
+        if (!motor.isRunning())
+        {
+            Serial.println("STOP");
+        }
+        else
+        {
+            Serial.print("RUNNING (");
+            Serial.print(motor.getDirection() > 0 ? "FORWARD" : "REVERSE");
+            Serial.println(")");
+        }
     }
 }
