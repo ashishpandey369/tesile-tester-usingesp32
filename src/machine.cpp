@@ -21,6 +21,21 @@ void MachineController::begin()
 
 void MachineController::update()
 {
+    // START toggle is the master automatic-motion control.
+    // OFF: stop automatic motion immediately and allow manual UP/DOWN.
+    if (ui.startTurnedOff())
+    {
+        motor.stop();
+        manualContinuousActive = false;
+        state = MachineState::READY;
+        forceLastUpdateMillis = millis();
+        Serial.println("[MACHINE] START OFF -> motor stopped");
+        refreshDisplay();
+        return;
+    }
+
+    // Handle RESET/MODE exactly as before. With START OFF it toggles
+    // between PULL/TENSILE and PUSH. With START ON it resets the force.
     if (ui.resetModePressed())
     {
         if (currentForce > INITIAL_CURRENT_FORCE)
@@ -28,17 +43,7 @@ void MachineController::update()
             motor.stop();
             manualContinuousActive = false;
             resetCurrentForce();
-
-            if (ui.startOn())
-            {
-                state = MachineState::STOP;
-            }
-            else
-            {
-                resetPending = false;
-                state = MachineState::READY;
-            }
-
+            state = ui.startOn() ? MachineState::STOP : MachineState::READY;
             refreshDisplay();
             return;
         }
@@ -54,38 +59,17 @@ void MachineController::update()
         }
     }
 
-    // START is the master ON/OFF control. When OFF, automatic motion
-    // is stopped immediately. When ON, the automatic motor is kept
-    // running continuously unless a safety/reset action stops it.
+    // START OFF: manual control only.
     if (!ui.startOn())
     {
-        if (motor.isRunning() && state == MachineState::RUNNING)
-            stopTestMotion();
-
-        modeChangeLock = false;
-        resetPending = false;
         updateManualControl();
         refreshDisplay();
         return;
     }
 
-    // UP/DOWN while START is ON select the requested test mode.
-    // Changing mode no longer requires cycling the START toggle.
-    if (ui.modeChangeRequested())
-    {
-        if (ui.requestedModeDirection() < 0)
-            mode = MachineMode::TENSILE;
-        else
-            mode = MachineMode::PUSH;
-
-        motor.stop();
-        manualContinuousActive = false;
-        state = MachineState::READY;
-        forceLastUpdateMillis = millis();
-    }
-
-    // START ON always ensures automatic motion is active.
-    if (state != MachineState::RUNNING || !motor.isRunning())
+    // START ON: automatically run according to the selected mode.
+    // PULL/TENSILE = UP, PUSH = DOWN.
+    if (ui.startTurnedOn() || state != MachineState::RUNNING || !motor.isRunning())
         startTestMotion();
 
     updateVirtualForce();
@@ -104,6 +88,7 @@ void MachineController::updateManualControl()
         state = MachineState::READY;
     }
 
+    // Short press: 1 second at 90% power.
     if (upPressed)
     {
         manualContinuousActive = false;
@@ -120,6 +105,7 @@ void MachineController::updateManualControl()
         return;
     }
 
+    // Long press: full power while the button remains held.
     if (ui.upLongHeld())
     {
         manualContinuousActive = true;
@@ -145,13 +131,17 @@ void MachineController::updateManualControl()
 
 void MachineController::startTestMotion()
 {
-    // TENSILE/PULL = anticlockwise (-1) and displayed as UP.
-    // PUSH         = clockwise    (+1) and displayed as DOWN.
+    // PULL/TENSILE = motor UP.
+    // PUSH         = motor DOWN.
     int direction = (mode == MachineMode::TENSILE) ? -1 : +1;
 
     motor.runContinuous(direction, MOTOR_NORMAL_SPEED_PERCENT);
     state = MachineState::RUNNING;
     forceLastUpdateMillis = millis();
+
+    Serial.print("[MACHINE] START ON -> ");
+    Serial.print(mode == MachineMode::TENSILE ? "PULL/UP" : "PUSH/DOWN");
+    Serial.println(" at 100% power");
 }
 
 void MachineController::stopTestMotion()
@@ -180,14 +170,9 @@ void MachineController::updateVirtualForce()
     if (elapsedMs == 0)
         return;
 
-    // 12 g is added for every elapsed millisecond while the automatic
-    // test motor is running. This remains stable even if the main loop
-    // does not execute exactly once every millisecond.
     currentForce += elapsedMs * FORCE_INCREASE_PER_MS_KG;
 
-    // The virtual force display saturates at the configured maximum,
-    // but reaching that value does not stop the motor. The START toggle
-    // remains the master control for continuous automatic motion.
+    // Saturate the displayed virtual force without stopping the motor.
     if (currentForce >= MAX_VIRTUAL_FORCE_KG)
         currentForce = MAX_VIRTUAL_FORCE_KG;
 
