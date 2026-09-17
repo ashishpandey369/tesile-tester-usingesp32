@@ -9,6 +9,85 @@
 #include "ui.h"
 #include "machine.h"
 
+namespace
+{
+    void handleMotorDiagnostic()
+    {
+        if (!Serial.available())
+            return;
+
+        char command = static_cast<char>(Serial.read());
+
+        // Diagnostic controls are intentionally available only with the
+        // START switch OFF so they cannot override an automatic test.
+        if (ui.startOn())
+        {
+            if (command == 's' || command == 'S')
+                motor.stop();
+            return;
+        }
+
+        switch (command)
+        {
+        case 'f':
+        case 'F':
+            motor.runContinuous(+1, 30.0f);
+            Serial.println("[MOTOR DIAG] FORWARD 30%");
+            break;
+
+        case 'r':
+        case 'R':
+            motor.runContinuous(-1, 30.0f);
+            Serial.println("[MOTOR DIAG] REVERSE 30%");
+            break;
+
+        case '1':
+            motor.runContinuous(+1, 20.0f);
+            Serial.println("[MOTOR DIAG] FORWARD 20%");
+            break;
+
+        case '2':
+            motor.runContinuous(+1, 40.0f);
+            Serial.println("[MOTOR DIAG] FORWARD 40%");
+            break;
+
+        case '3':
+            motor.runContinuous(+1, 60.0f);
+            Serial.println("[MOTOR DIAG] FORWARD 60%");
+            break;
+
+        case '4':
+            motor.runContinuous(-1, 20.0f);
+            Serial.println("[MOTOR DIAG] REVERSE 20%");
+            break;
+
+        case '5':
+            motor.runContinuous(-1, 40.0f);
+            Serial.println("[MOTOR DIAG] REVERSE 40%");
+            break;
+
+        case '6':
+            motor.runContinuous(-1, 60.0f);
+            Serial.println("[MOTOR DIAG] REVERSE 60%");
+            break;
+
+        case 's':
+        case 'S':
+            motor.stop();
+            Serial.println("[MOTOR DIAG] STOP");
+            break;
+
+        case 'h':
+        case 'H':
+            Serial.println("[MOTOR DIAG] f=+30%, r=-30%, 1/2/3=+20/40/60%, 4/5/6=-20/40/60%, s=stop");
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
 void setup()
 {
     Serial.begin(SERIAL_BAUDRATE);
@@ -31,6 +110,7 @@ void setup()
 
     Serial.println("Initialization Complete");
     Serial.println("System Ready");
+    Serial.println("BTS7960 diagnostic: H = help, F/R = +/-30%, 1-3 = +20/40/60%, 4-6 = -20/40/60%, S = stop");
 }
 
 void loop()
@@ -43,6 +123,10 @@ void loop()
     // Machine logic handles the toggle switch, mode selection,
     // manual jog, automatic motion and time-based virtual force.
     machine.update();
+
+    // Optional serial diagnostic control for the BTS7960/DC motor.
+    // START must be OFF before diagnostic motion is accepted.
+    handleMotorDiagnostic();
 
     // Update the BTS7960 motor controller and timed manual moves.
     motor.update();
