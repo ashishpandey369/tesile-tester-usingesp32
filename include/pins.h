@@ -4,9 +4,10 @@
 #include <Arduino.h>
 
 //====================================================
-// HX711 Load Cell (legacy / unused in v2.x)
+// Legacy HX711 pins
 //====================================================
-
+// Kept documented for reference only. The current tester
+// uses a software force value and does not use an HX711.
 constexpr uint8_t HX711_DT_PIN = 4;
 constexpr uint8_t HX711_SCK_PIN = 5;
 
@@ -26,12 +27,17 @@ constexpr uint8_t RESET_MODE_BUTTON_PIN = 26;
 constexpr uint8_t START_SWITCH_PIN = 13;
 
 //====================================================
-// Stepper Driver (HW-134A)
+// BTS7960 43A H-Bridge + 12V DC Gear Motor
 //====================================================
-
-constexpr uint8_t STEP_PIN = 25;
-constexpr uint8_t DIR_PIN = 17;
-constexpr uint8_t ENABLE_PIN = 16;
+// RPWM/LPWM control motor direction and speed.
+// R_EN/L_EN enable the two BTS7960 half-bridges.
+//
+// GPIO4 is no longer used by an HX711 in the active firmware,
+// so it is repurposed for L_EN.
+constexpr uint8_t BTS7960_RPWM_PIN = 25;
+constexpr uint8_t BTS7960_LPWM_PIN = 17;
+constexpr uint8_t BTS7960_R_EN_PIN = 16;
+constexpr uint8_t BTS7960_L_EN_PIN = 4;
 
 //====================================================
 // ILI9488 Display (Hardware SPI)
@@ -49,8 +55,8 @@ constexpr uint8_t DISPLAY_RST_PIN = 33;
 // Logic Levels
 //====================================================
 
-constexpr bool MOTOR_ENABLE = LOW;
-constexpr bool MOTOR_DISABLE = HIGH;
+constexpr bool MOTOR_ENABLE = HIGH;
+constexpr bool MOTOR_DISABLE = LOW;
 
 constexpr bool SWITCH_ON = LOW;
 constexpr bool SWITCH_OFF = HIGH;
