@@ -39,14 +39,14 @@ constexpr float MAX_VIRTUAL_FORCE_KG = 99.999f;
 //====================================================
 
 // Speed is expressed as a PWM percentage (0-100%).
-// Full power is used for automatic movement and long holds.
+// Automatic movement uses the normal test speed.
 constexpr float MOTOR_NORMAL_SPEED_PERCENT = 100.0f;
 constexpr float MOTOR_RETURN_SPEED_PERCENT = 100.0f;
 
 // Manual movement
-// A short UP/DOWN press runs the DC motor for 1 second at 90%.
+// A short UP/DOWN press runs the DC motor for 1 second at 50%.
 constexpr uint16_t MANUAL_STEP_TIME_MS = 1000;
-constexpr float MANUAL_STEP_SPEED_PERCENT = 90.0f;
+constexpr float MANUAL_STEP_SPEED_PERCENT = 50.0f;
 
 // A long UP/DOWN press runs continuously at full power until released.
 constexpr float MANUAL_HOLD_SPEED_PERCENT = 100.0f;
@@ -56,7 +56,11 @@ constexpr float MANUAL_HOLD_SPEED_PERCENT = 100.0f;
 //====================================================
 
 constexpr uint16_t BUTTON_LONG_PRESS_MS = 1000;
-constexpr uint16_t BUTTON_DEBOUNCE_MS = 30;
+
+// 2 ms input debounce guard. A new transition must remain stable
+// for at least this interval before it is accepted as a press/release.
+constexpr uint16_t BUTTON_DEBOUNCE_MS = 2;
+
 constexpr uint16_t MODE_CHANGE_WINDOW_MS = 600;
 
 // UP/DOWN select a mode only while the master toggle is ON.
