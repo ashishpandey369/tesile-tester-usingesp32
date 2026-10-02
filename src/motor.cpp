@@ -1,4 +1,6 @@
 #include "motor.h"
+#include "pins.h"
+#include "config.h"
 
 MotorController motor;
 
