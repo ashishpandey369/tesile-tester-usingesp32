@@ -9,10 +9,23 @@ void UIManager::begin()
     pinMode(RESET_MODE_BUTTON_PIN, INPUT_PULLUP);
     pinMode(START_SWITCH_PIN, INPUT_PULLUP);
 
+    const uint32_t now = millis();
+
     lastUp = digitalRead(BUTTON_UP_PIN);
     lastDown = digitalRead(BUTTON_DOWN_PIN);
     lastResetMode = digitalRead(RESET_MODE_BUTTON_PIN);
     lastStart = digitalRead(START_SWITCH_PIN);
+
+    rawUp = lastUp;
+    rawDown = lastDown;
+    rawResetMode = lastResetMode;
+    rawStart = lastStart;
+
+    upRawChangedAt = now;
+    downRawChangedAt = now;
+    resetRawChangedAt = now;
+    startRawChangedAt = now;
+
     startState = (lastStart == LOW);
     previousStartState = startState;
 
@@ -31,10 +44,73 @@ void UIManager::begin()
 
 void UIManager::update()
 {
-    bool currentUp = digitalRead(BUTTON_UP_PIN);
-    bool currentDown = digitalRead(BUTTON_DOWN_PIN);
-    bool currentResetMode = digitalRead(RESET_MODE_BUTTON_PIN);
-    bool currentStart = digitalRead(START_SWITCH_PIN);
+    const uint32_t now = millis();
+
+    const bool sampledUp = digitalRead(BUTTON_UP_PIN);
+    const bool sampledDown = digitalRead(BUTTON_DOWN_PIN);
+    const bool sampledResetMode = digitalRead(RESET_MODE_BUTTON_PIN);
+    const bool sampledStart = digitalRead(START_SWITCH_PIN);
+
+    // Track raw changes first. A raw state is accepted only after it
+    // remains unchanged for BUTTON_DEBOUNCE_MS.
+    if (sampledUp != rawUp)
+    {
+        rawUp = sampledUp;
+        upRawChangedAt = now;
+    }
+
+    if (sampledDown != rawDown)
+    {
+        rawDown = sampledDown;
+        downRawChangedAt = now;
+    }
+
+    if (sampledResetMode != rawResetMode)
+    {
+        rawResetMode = sampledResetMode;
+        resetRawChangedAt = now;
+    }
+
+    if (sampledStart != rawStart)
+    {
+        rawStart = sampledStart;
+        startRawChangedAt = now;
+    }
+
+    bool newUpPress = false;
+    bool newDownPress = false;
+    bool newResetModePress = false;
+
+    if (rawUp != lastUp && (now - upRawChangedAt) >= BUTTON_DEBOUNCE_MS)
+    {
+        const bool oldUp = lastUp;
+        lastUp = rawUp;
+        newUpPress = (oldUp == HIGH && lastUp == LOW);
+    }
+
+    if (rawDown != lastDown && (now - downRawChangedAt) >= BUTTON_DEBOUNCE_MS)
+    {
+        const bool oldDown = lastDown;
+        lastDown = rawDown;
+        newDownPress = (oldDown == HIGH && lastDown == LOW);
+    }
+
+    if (rawResetMode != lastResetMode && (now - resetRawChangedAt) >= BUTTON_DEBOUNCE_MS)
+    {
+        const bool oldResetMode = lastResetMode;
+        lastResetMode = rawResetMode;
+        newResetModePress = (oldResetMode == HIGH && lastResetMode == LOW);
+    }
+
+    if (rawStart != lastStart && (now - startRawChangedAt) >= BUTTON_DEBOUNCE_MS)
+    {
+        lastStart = rawStart;
+    }
+
+    const bool currentUp = lastUp;
+    const bool currentDown = lastDown;
+    const bool currentResetMode = lastResetMode;
+    const bool currentStart = lastStart;
 
     upState = false;
     downState = false;
@@ -43,16 +119,12 @@ void UIManager::update()
     manualDownEvent = false;
     modeChangeState = false;
 
-    bool newUpPress = (lastUp == HIGH && currentUp == LOW);
-    bool newDownPress = (lastDown == HIGH && currentDown == LOW);
-    bool newResetModePress = (lastResetMode == HIGH && currentResetMode == LOW);
-
     // Capture the previous START state before updating the current state.
-    bool oldStartState = startState;
+    const bool oldStartState = startState;
     startState = (currentStart == LOW);
     previousStartState = oldStartState;
 
-    // Report every START transition immediately.
+    // Report every debounced START transition immediately.
     if (startState != oldStartState)
     {
         if (startState)
@@ -66,26 +138,28 @@ void UIManager::update()
 
     if (currentUp == LOW)
     {
-        if (lastUp == HIGH)
-            upHoldStart = millis();
+        if (lastUp == LOW && upHoldStart == 0)
+            upHoldStart = now;
 
-        upLongState = (millis() - upHoldStart >= BUTTON_LONG_PRESS_MS);
+        upLongState = (now - upHoldStart >= BUTTON_LONG_PRESS_MS);
     }
     else
     {
         upLongState = false;
+        upHoldStart = 0;
     }
 
     if (currentDown == LOW)
     {
-        if (lastDown == HIGH)
-            downHoldStart = millis();
+        if (lastDown == LOW && downHoldStart == 0)
+            downHoldStart = now;
 
-        downLongState = (millis() - downHoldStart >= BUTTON_LONG_PRESS_MS);
+        downLongState = (now - downHoldStart >= BUTTON_LONG_PRESS_MS);
     }
     else
     {
         downLongState = false;
+        downHoldStart = 0;
     }
 
     // UP/DOWN are manual motor controls only when START is OFF.
@@ -93,13 +167,13 @@ void UIManager::update()
     if (newUpPress && !startState)
     {
         manualUpEvent = true;
-        Serial.println("[UI] UP press -> manual +1 step");
+        Serial.println("[UI] UP press -> manual step");
     }
 
     if (newDownPress && !startState)
     {
         manualDownEvent = true;
-        Serial.println("[UI] DOWN press -> manual -1 step");
+        Serial.println("[UI] DOWN press -> manual step");
     }
 
     if (newResetModePress)
@@ -108,15 +182,10 @@ void UIManager::update()
         Serial.println("[UI] RESET/MODE press detected");
     }
 
-    lastUp = currentUp;
-    lastDown = currentDown;
-    lastResetMode = currentResetMode;
-    lastStart = currentStart;
-
     static uint32_t lastDebug = 0;
-    if (millis() - lastDebug >= 1000)
+    if (now - lastDebug >= 1000)
     {
-        lastDebug = millis();
+        lastDebug = now;
         Serial.print("[UI RAW] UP=");
         Serial.print(currentUp);
         Serial.print(" DOWN=");
