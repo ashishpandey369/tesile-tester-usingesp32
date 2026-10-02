@@ -7,6 +7,7 @@
 #include "safety.h"
 #include "ui.h"
 #include "machine.h"
+#include "health.h"
 
 namespace
 {
@@ -102,6 +103,7 @@ void setup()
     safety.begin();
     ui.begin();
     machine.begin();
+    health.begin();
 
     Serial.println("Initialization Complete");
     Serial.println("System Ready");
@@ -129,6 +131,7 @@ void loop()
     motor.update();
 
     display.update();
+    health.update();
 
     static unsigned long lastPrint = 0;
 
