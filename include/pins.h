@@ -10,7 +10,7 @@
 constexpr uint8_t BUTTON_UP_PIN = 22;
 constexpr uint8_t BUTTON_DOWN_PIN = 21;
 constexpr uint8_t RESET_MODE_BUTTON_PIN = 26;
-constexpr uint8_t START_SWITCH_PIN = 13;
+constexpr uint8_t START_SWITCH_PIN = 14;
 
 //====================================================
 // BTS7960 43A H-Bridge + 12V DC Gear Motor
