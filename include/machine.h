@@ -36,6 +36,7 @@ private:
 
     float currentForce = INITIAL_CURRENT_FORCE;
     uint32_t forceLastUpdateMillis = 0;
+    uint32_t testStartMillis = 0;
 
     bool modeChangeLock = false;
     bool resetPending = false;
