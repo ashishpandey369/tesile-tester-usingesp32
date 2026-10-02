@@ -68,7 +68,7 @@ void MachineController::update()
     }
 
     // START ON: automatically run according to the selected mode.
-    // PULL/TENSILE = UP, PUSH = DOWN.
+    // PUSH = UP, PULL/TENSILE = DOWN.
     if (ui.startTurnedOn() || state != MachineState::RUNNING || !motor.isRunning())
         startTestMotion();
 
@@ -88,7 +88,7 @@ void MachineController::updateManualControl()
         state = MachineState::READY;
     }
 
-    // Short press: 1 second at 50% power.
+    // Short press uses the configured 0.3 second manual step.
     // UP is -1 and DOWN is +1, matching the motor direction convention.
     if (upPressed)
     {
@@ -106,7 +106,7 @@ void MachineController::updateManualControl()
         return;
     }
 
-    // Long press: full power while the button remains held.
+    // Long press runs continuously while the button remains held.
     if (ui.upLongHeld())
     {
         manualContinuousActive = true;
@@ -132,16 +132,16 @@ void MachineController::updateManualControl()
 
 void MachineController::startTestMotion()
 {
-    // PULL/TENSILE = motor UP.
-    // PUSH         = motor DOWN.
-    int direction = (mode == MachineMode::TENSILE) ? -1 : +1;
+    // PUSH         = motor UP.
+    // PULL/TENSILE = motor DOWN.
+    int direction = (mode == MachineMode::TENSILE) ? +1 : -1;
 
     motor.runContinuous(direction, MOTOR_NORMAL_SPEED_PERCENT);
     state = MachineState::RUNNING;
     forceLastUpdateMillis = millis();
 
     Serial.print("[MACHINE] START ON -> ");
-    Serial.print(mode == MachineMode::TENSILE ? "PULL/UP" : "PUSH/DOWN");
+    Serial.print(mode == MachineMode::TENSILE ? "PULL/DOWN" : "PUSH/UP");
     Serial.println(" at configured automatic power");
 }
 
@@ -171,7 +171,29 @@ void MachineController::updateVirtualForce()
     if (elapsedMs == 0)
         return;
 
-    currentForce += elapsedMs * FORCE_INCREASE_PER_MS_KG;
+    // Virtual force ramp:
+    // First 3 seconds: +500 g/s (0.5 kg/s)
+    // Next 3 seconds:  +10 g/s (0.01 kg/s)
+    // After 6 seconds: +1 g/s (0.001 kg/s)
+    //
+    // The ramp is based on elapsed automatic test time, not on motor speed.
+    uint32_t testElapsedMs = now - testStartMillis;
+
+    float increasePerMsKg;
+    if (testElapsedMs < 3000UL)
+    {
+        increasePerMsKg = 0.0005f; // 500 g/s = 0.5 kg/s
+    }
+    else if (testElapsedMs < 6000UL)
+    {
+        increasePerMsKg = 0.00001f; // 10 g/s = 0.01 kg/s
+    }
+    else
+    {
+        increasePerMsKg = 0.000001f; // 1 g/s = 0.001 kg/s
+    }
+
+    currentForce += elapsedMs * increasePerMsKg;
 
     // Saturate the displayed virtual force without stopping the motor.
     if (currentForce >= MAX_VIRTUAL_FORCE_KG)
@@ -195,9 +217,12 @@ void MachineController::refreshDisplay()
 
     int motorDirection = motor.getDirection();
 
-    if (motorDirection < 0)
+    // Direction convention for the automatic test:
+    // +1 = PUSH/UP
+    // -1 = PULL/DOWN
+    if (motorDirection > 0)
         display.setMotorStatus("UP");
-    else if (motorDirection > 0)
+    else if (motorDirection < 0)
         display.setMotorStatus("DOWN");
     else
         display.setMotorStatus("STOP");
