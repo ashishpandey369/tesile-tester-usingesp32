@@ -90,7 +90,7 @@ void MachineController::updateManualControl()
     }
 
     // Short press uses the configured 0.3 second manual step.
-    // UP is -1 and DOWN is +1, matching the motor direction convention.
+    // UP is -1 and DOWN is +1, matching the physical motor direction.
     if (upPressed)
     {
         manualContinuousActive = false;
@@ -135,6 +135,7 @@ void MachineController::startTestMotion()
 {
     // PUSH         = motor UP.
     // PULL/TENSILE = motor DOWN.
+    // With the current BTS7960 wiring, PUSH uses -1 and PULL uses +1.
     int direction = (mode == MachineMode::TENSILE) ? +1 : -1;
 
     motor.runContinuous(direction, MOTOR_NORMAL_SPEED_PERCENT);
@@ -220,12 +221,15 @@ void MachineController::refreshDisplay()
 
     int motorDirection = motor.getDirection();
 
-    // Direction convention for the automatic test:
-    // +1 = PUSH/UP
-    // -1 = PULL/DOWN
-    if (motorDirection > 0)
+    // Physical direction mapping for the current BTS7960 wiring:
+    // -1 = motor moving UP
+    // +1 = motor moving DOWN.
+    //
+    // Keep the displayed direction tied to actual physical movement,
+    // rather than the raw BTS7960 PWM direction number.
+    if (motorDirection < 0)
         display.setMotorStatus("UP");
-    else if (motorDirection < 0)
+    else if (motorDirection > 0)
         display.setMotorStatus("DOWN");
     else
         display.setMotorStatus("STOP");
