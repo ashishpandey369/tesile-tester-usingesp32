@@ -88,11 +88,12 @@ void MachineController::updateManualControl()
         state = MachineState::READY;
     }
 
-    // Short press: 1 second at 90% power.
+    // Short press: 1 second at 50% power.
+    // UP is -1 and DOWN is +1, matching the motor direction convention.
     if (upPressed)
     {
         manualContinuousActive = false;
-        motor.manualStep(+1);
+        motor.manualStep(-1);
         state = MachineState::READY;
         return;
     }
@@ -100,7 +101,7 @@ void MachineController::updateManualControl()
     if (downPressed)
     {
         manualContinuousActive = false;
-        motor.manualStep(-1);
+        motor.manualStep(+1);
         state = MachineState::READY;
         return;
     }
@@ -110,7 +111,7 @@ void MachineController::updateManualControl()
     {
         manualContinuousActive = true;
         state = MachineState::READY;
-        motor.manualHold(+1);
+        motor.manualHold(-1);
         return;
     }
 
@@ -118,7 +119,7 @@ void MachineController::updateManualControl()
     {
         manualContinuousActive = true;
         state = MachineState::READY;
-        motor.manualHold(-1);
+        motor.manualHold(+1);
         return;
     }
 
@@ -141,7 +142,7 @@ void MachineController::startTestMotion()
 
     Serial.print("[MACHINE] START ON -> ");
     Serial.print(mode == MachineMode::TENSILE ? "PULL/UP" : "PUSH/DOWN");
-    Serial.println(" at 100% power");
+    Serial.println(" at configured automatic power");
 }
 
 void MachineController::stopTestMotion()
@@ -194,9 +195,9 @@ void MachineController::refreshDisplay()
 
     int motorDirection = motor.getDirection();
 
-    if (motorDirection > 0)
+    if (motorDirection < 0)
         display.setMotorStatus("UP");
-    else if (motorDirection < 0)
+    else if (motorDirection > 0)
         display.setMotorStatus("DOWN");
     else
         display.setMotorStatus("STOP");
