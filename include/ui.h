@@ -40,10 +40,22 @@ private:
     bool upLongState = false;
     bool downLongState = false;
 
+    // Debounced/stable input states.
     bool lastUp = HIGH;
     bool lastDown = HIGH;
     bool lastResetMode = HIGH;
     bool lastStart = HIGH;
+
+    // Last raw samples and the time each raw input changed.
+    bool rawUp = HIGH;
+    bool rawDown = HIGH;
+    bool rawResetMode = HIGH;
+    bool rawStart = HIGH;
+
+    uint32_t upRawChangedAt = 0;
+    uint32_t downRawChangedAt = 0;
+    uint32_t resetRawChangedAt = 0;
+    uint32_t startRawChangedAt = 0;
 
     unsigned long upHoldStart = 0;
     unsigned long downHoldStart = 0;
