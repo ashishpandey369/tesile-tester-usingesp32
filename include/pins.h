@@ -10,17 +10,14 @@
 constexpr uint8_t BUTTON_UP_PIN = 22;
 constexpr uint8_t BUTTON_DOWN_PIN = 21;
 constexpr uint8_t RESET_MODE_BUTTON_PIN = 26;
-// GPIO14 is now dedicated to the START toggle.
-// The buzzer is no longer used by the active firmware.
-constexpr uint8_t START_SWITCH_PIN = 14;
+constexpr uint8_t START_SWITCH_PIN = 13;
 
 //====================================================
 // BTS7960 43A H-Bridge + 12V DC Gear Motor
 //====================================================
 // RPWM/LPWM control motor direction and speed.
 // R_EN/L_EN enable the two BTS7960 half-bridges.
-// GPIO4 is available because the active firmware no longer
-// uses an HX711 load-cell interface.
+// GPIO4 is used for the BTS7960 L_EN signal.
 constexpr uint8_t BTS7960_RPWM_PIN = 25;
 constexpr uint8_t BTS7960_LPWM_PIN = 17;
 constexpr uint8_t BTS7960_R_EN_PIN = 16;
