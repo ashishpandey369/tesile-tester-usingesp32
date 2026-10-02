@@ -12,6 +12,7 @@ void MachineController::begin()
     resetPending = false;
     manualContinuousActive = false;
     forceLastUpdateMillis = millis();
+    testStartMillis = millis();
 
     display.setCurrentForce(currentForce);
     display.setMode("PULL");
@@ -139,6 +140,7 @@ void MachineController::startTestMotion()
     motor.runContinuous(direction, MOTOR_NORMAL_SPEED_PERCENT);
     state = MachineState::RUNNING;
     forceLastUpdateMillis = millis();
+    testStartMillis = millis();
 
     Serial.print("[MACHINE] START ON -> ");
     Serial.print(mode == MachineMode::TENSILE ? "PULL/DOWN" : "PUSH/UP");
@@ -156,6 +158,7 @@ void MachineController::resetCurrentForce()
 {
     currentForce = INITIAL_CURRENT_FORCE;
     forceLastUpdateMillis = millis();
+    testStartMillis = millis();
 }
 
 void MachineController::updateVirtualForce()
