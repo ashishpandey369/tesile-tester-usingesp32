@@ -41,16 +41,16 @@ constexpr float MAX_VIRTUAL_FORCE_KG = 99.999f;
 
 // Speed is expressed as a PWM percentage (0-100%).
 // Automatic movement uses the normal test speed.
-constexpr float MOTOR_NORMAL_SPEED_PERCENT = 30.0f;
-constexpr float MOTOR_RETURN_SPEED_PERCENT = 30.0f;
+constexpr float MOTOR_NORMAL_SPEED_PERCENT = 25.0f;
+constexpr float MOTOR_RETURN_SPEED_PERCENT = 25.0f;
 
 // Manual movement
-// A short UP/DOWN press runs the DC motor for 0.3 seconds at 30%.
+// A short UP/DOWN press runs the DC motor for 0.3 seconds at 25%.
 constexpr uint16_t MANUAL_STEP_TIME_MS = 300;
-constexpr float MANUAL_STEP_SPEED_PERCENT = 30.0f;
+constexpr float MANUAL_STEP_SPEED_PERCENT = 25.0f;
 
-// A long UP/DOWN press runs continuously at 30% power until released.
-constexpr float MANUAL_HOLD_SPEED_PERCENT = 30.0f;
+// A long UP/DOWN press runs continuously at 25% power until released.
+constexpr float MANUAL_HOLD_SPEED_PERCENT = 25.0f;
 
 //====================================================
 // Mode / Button Configuration
