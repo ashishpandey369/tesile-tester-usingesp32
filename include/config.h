@@ -45,8 +45,8 @@ constexpr float MOTOR_NORMAL_SPEED_PERCENT = 100.0f;
 constexpr float MOTOR_RETURN_SPEED_PERCENT = 100.0f;
 
 // Manual movement
-// A short UP/DOWN press runs the DC motor for 0.5 seconds at 50%.
-constexpr uint16_t MANUAL_STEP_TIME_MS = 500;
+// A short UP/DOWN press runs the DC motor for 0.3 seconds at 50%.
+constexpr uint16_t MANUAL_STEP_TIME_MS = 300;
 constexpr float MANUAL_STEP_SPEED_PERCENT = 50.0f;
 
 // A long UP/DOWN press runs continuously at 50% power until released.
